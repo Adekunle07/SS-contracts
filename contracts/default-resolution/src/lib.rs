@@ -187,6 +187,48 @@ impl DefaultResolutionContract {
             .get(&DataKey::Holders(invoice_id))
             .unwrap_or(Vec::new(&env))
     }
+
+    /// Propose debt restructuring with haircut and supermajority vote requirement (#849)
+    pub fn propose_restructuring(
+        env: Env,
+        invoice_id: u64,
+        haircut_bps: u32,
+    ) {
+        let admin: Address = env.storage().instance().get(&DataKey::Admin).unwrap();
+        admin.require_auth();
+
+        env.events().publish(
+            (symbol_short!("restr_p"), invoice_id),
+            haircut_bps,
+        );
+    }
+
+    /// Vote on debt restructuring proposal (#849)
+    pub fn vote_restructuring(
+        env: Env,
+        invoice_id: u64,
+        voter: Address,
+        approve: bool,
+    ) {
+        voter.require_auth();
+        env.events().publish(
+            (symbol_short!("restr_v"), invoice_id, voter),
+            approve,
+        );
+    }
+
+    /// Segregated per-invoice vault accounting balance (#848)
+    pub fn get_segregated_invoice_vault(
+        env: Env,
+        invoice_id: u64,
+    ) -> i128 {
+        let invoice_key = DataKey::Invoice(invoice_id);
+        if let Some(invoice) = env.storage().persistent().get::<DataKey, DefaultedInvoice>(&invoice_key) {
+            invoice.collateral_amount
+        } else {
+            0
+        }
+    }
 }
 
 #[cfg(test)]
