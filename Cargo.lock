@@ -547,6 +547,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "credit-scoring"
+version = "0.1.0"
+dependencies = [
+ "soroban-sdk 27.0.6",
+]
+
+[[package]]
 name = "crypto-bigint"
 version = "0.5.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -722,6 +729,13 @@ name = "data-encoding"
 version = "2.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4583a4551df46e2792f82ceeac45e850d2e2d5debba0b91f102385cda5b11f06"
+
+[[package]]
+name = "debtor-exposure-cap"
+version = "0.1.0"
+dependencies = [
+ "soroban-sdk 27.0.6",
+]
 
 [[package]]
 name = "defmt"
@@ -1008,13 +1022,6 @@ checksum = "da7c62ceae207dd37ea5b845da6a0696c799f85e97da1ab5b7910be3c1c80223"
 
 [[package]]
 name = "fee-discount"
-version = "0.1.0"
-dependencies = [
- "soroban-sdk 27.0.6",
-]
-
-[[package]]
-name = "fee-treasury"
 version = "0.1.0"
 dependencies = [
  "soroban-sdk 27.0.6",
@@ -1371,6 +1378,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "invoice-milestone"
+version = "0.1.0"
+dependencies = [
+ "soroban-sdk 27.0.6",
+]
+
+[[package]]
 name = "invoice-performance-alert"
 version = "0.1.0"
 dependencies = [
@@ -1676,6 +1690,13 @@ checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
 
 [[package]]
 name = "order-book"
+version = "0.1.0"
+dependencies = [
+ "soroban-sdk 27.0.6",
+]
+
+[[package]]
+name = "overcollateral-reward"
 version = "0.1.0"
 dependencies = [
  "soroban-sdk 27.0.6",
@@ -2047,7 +2068,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "secondary-cooldown"
+version = "0.1.0"
+dependencies = [
+ "soroban-sdk 27.0.6",
+]
+
+[[package]]
 name = "secondary-market"
+version = "0.1.0"
+dependencies = [
+ "soroban-sdk 27.0.6",
+]
+
+[[package]]
+name = "secondary-market-oracle"
 version = "0.1.0"
 dependencies = [
  "soroban-sdk 27.0.6",
@@ -2831,6 +2866,13 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "baa693a8032d7e1cada7d0041e96126df243179ff061456783ac7f12bda4744c"
 dependencies = [
  "winnow",
+]
+
+[[package]]
+name = "transfer-restriction"
+version = "0.1.0"
+dependencies = [
+ "soroban-sdk 27.0.6",
 ]
 
 [[package]]
