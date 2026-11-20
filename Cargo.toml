@@ -56,6 +56,8 @@ members = [
     "contracts/invoice-co-investment-pool",
     "contracts/invoice-hardship-extension",
     "contracts/debtor-exposure-cap",
+    "contracts/settlement-priority-queue",
+    "contracts/rate-auction",
 ]
 
 [workspace.dependencies]
