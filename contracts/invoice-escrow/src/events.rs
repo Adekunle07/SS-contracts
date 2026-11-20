@@ -494,3 +494,11 @@ pub fn currency_invested(
         (investor.clone(), currency.clone(), amount, base_amount),
     );
 }
+
+/// Publish a change to a currency's maximum FX quote age.
+pub fn currency_max_age_set(env: &Env, currency: &Symbol, max_age_secs: u64) {
+    env.events().publish(
+        (Symbol::new(env, "currency_max_age_set"), currency.clone()),
+        max_age_secs,
+    );
+}
