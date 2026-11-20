@@ -738,6 +738,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "debtor-registry"
+version = "0.1.0"
+dependencies = [
+ "soroban-sdk 27.0.6",
+]
+
+[[package]]
 name = "defmt"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1007,6 +1014,13 @@ name = "escape-bytes"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2bfcf67fea2815c2fc3b90873fae90957be12ff417335dfadc7f52927feb03b2"
+
+[[package]]
+name = "escape-hatch"
+version = "0.1.0"
+dependencies = [
+ "soroban-sdk 27.0.6",
+]
 
 [[package]]
 name = "ethnum"
@@ -1320,6 +1334,13 @@ dependencies = [
 
 [[package]]
 name = "invoice-amendment"
+version = "0.1.0"
+dependencies = [
+ "soroban-sdk 27.0.6",
+]
+
+[[package]]
+name = "invoice-assignment"
 version = "0.1.0"
 dependencies = [
  "soroban-sdk 27.0.6",
@@ -1687,6 +1708,13 @@ name = "once_cell"
 version = "1.21.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9f7c3e4beb33f85d45ae3e3a1792185706c8e16d043238c593331cc7cd313b50"
+
+[[package]]
+name = "operator-approvals"
+version = "0.1.0"
+dependencies = [
+ "soroban-sdk 27.0.6",
+]
 
 [[package]]
 name = "order-book"
