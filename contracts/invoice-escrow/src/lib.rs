@@ -49,6 +49,12 @@ fn percent_filled_bps(raised: i128, target: i128) -> u32 {
     core::cmp::min(bps, 10_000) as u32
 }
 
+/// Maximum FX quote age for `currency`: its configured value, else the adapter default.
+fn currency_max_age(env: &Env, currency: &Symbol) -> u64 {
+    storage::get_currency_max_age(env, currency)
+        .unwrap_or(OraclePriceAdapter::DEFAULT_MAX_STALENESS_SECS)
+}
+
 /// Reject the zero address (all-zero 32-byte Ed25519 key) which is never a valid participant.
 fn ensure_non_zero_address(env: &Env, address: &Address) -> Result<(), Error> {
     // Convert address to its string representation and check for the well-known
@@ -2061,6 +2067,45 @@ impl InvoiceEscrow {
         storage::get_currency_token(&env, &currency)
     }
 
+    /// Admin-only: set the maximum FX quote age (seconds) accepted for
+    /// `currency`. Currencies without one use the adapter default.
+    pub fn set_currency_max_age(
+        env: Env,
+        admin: Address,
+        currency: Symbol,
+        max_age_secs: u64,
+    ) -> Result<(), Error> {
+        admin.require_auth();
+        let config = storage::get_config(&env).ok_or(Error::NotInit)?;
+        if config.admin != admin {
+            return Err(Error::Unauthorized);
+        }
+        if max_age_secs == 0 {
+            return Err(Error::InvalidAmount);
+        }
+        storage::set_currency_max_age(&env, &currency, max_age_secs);
+        events::currency_max_age_set(&env, &currency, max_age_secs);
+        Ok(())
+    }
+
+    /// View: `(quote_age_secs, max_age_secs, is_fresh)` for the current FX
+    /// oracle quote of a supported `currency`.
+    pub fn get_currency_quote_freshness(
+        env: Env,
+        currency: Symbol,
+    ) -> Result<(u64, u64, bool), Error> {
+        storage::get_currency_token(&env, &currency).ok_or(Error::UnsupportedCurrency)?;
+        let oracle = storage::get_fx_oracle(&env).ok_or(Error::FxOracleNotSet)?;
+        let price: PriceData = env.invoke_contract(
+            &oracle,
+            &Symbol::new(&env, "get_price"),
+            (currency.clone(),).into_val(&env),
+        );
+        let age = env.ledger().timestamp().saturating_sub(price.timestamp);
+        let max_age = currency_max_age(&env, &currency);
+        Ok((age, max_age, age <= max_age))
+    }
+
     /// Invest `amount` of `currency` in a funding invoice. The amount is
     /// converted to base currency at the FX oracle rate fetched now, and the
     /// normalised base amount is what the investor position, the invoice
@@ -2090,7 +2135,7 @@ impl InvoiceEscrow {
             (currency.clone(),).into_val(&env),
         );
         let now = env.ledger().timestamp();
-        if now.saturating_sub(price.timestamp) > OraclePriceAdapter::DEFAULT_MAX_STALENESS_SECS {
+        if now.saturating_sub(price.timestamp) > currency_max_age(&env, &currency) {
             return Err(Error::StalePrice);
         }
         if price.price <= 0 {
@@ -2866,6 +2911,8 @@ mod test;
 mod test_buy_limit;
 #[cfg(test)]
 mod test_multi_currency;
+#[cfg(test)]
+mod test_storage_ttl;
 
 // Modules added for batch resolution of #479, #480, #481
 pub mod earnest_deposit;

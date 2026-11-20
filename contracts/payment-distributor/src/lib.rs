@@ -81,10 +81,18 @@ fn parse_fee_bps(fee_bps: i128) -> Result<u32, Error> {
     Ok(fee_bps_u32)
 }
 
-/// Select the appropriate fee tier based on payment volume.
-/// Returns the fee_bps for the tier that matches the payment amount.
-/// If no tiers are configured or amount doesn't match any tier, returns the default fee.
+/// Select the platform fee for a payment.
+///
+/// Precedence: an active fee promotion (`start_ledger <= ledger < end_ledger`)
+/// wins; otherwise the first configured tier (in stored order) whose range
+/// contains `payment_amount`; otherwise `default_fee_bps`. Fees round down.
 fn select_fee_tier(env: &Env, payment_amount: i128, default_fee_bps: u32) -> u32 {
+    if let Some(promo) = storage::get_fee_promotion(env) {
+        let ledger = env.ledger().sequence();
+        if ledger >= promo.start_ledger && ledger < promo.end_ledger {
+            return promo.fee_bps;
+        }
+    }
     if let Some(tiers) = storage::get_fee_tiers(env) {
         for tier in tiers.iter() {
             if payment_amount >= tier.min_amount
@@ -488,6 +496,35 @@ impl PaymentDistributor {
         Ok(())
     }
 
+    /// Admin-only: set (`Some`) or clear (`None`) the promotional platform fee.
+    pub fn set_fee_promotion(
+        env: Env,
+        admin: Address,
+        promotion: Option<types::FeePromotion>,
+    ) -> Result<(), Error> {
+        let stored_admin = storage::get_admin(&env).ok_or(Error::NotInit)?;
+        if admin != stored_admin {
+            return Err(Error::Unauthorized);
+        }
+        admin.require_auth();
+        if let Some(p) = &promotion {
+            if p.fee_bps > MAX_FEE_BPS {
+                return Err(Error::InvalidBps);
+            }
+            if p.start_ledger >= p.end_ledger {
+                return Err(Error::InvalidAmount);
+            }
+        }
+        storage::set_fee_promotion(&env, &promotion);
+        Ok(())
+    }
+
+    /// View: the configured fee promotion, if any.
+    pub fn get_fee_promotion(env: Env) -> Result<Option<types::FeePromotion>, Error> {
+        storage::get_admin(&env).ok_or(Error::NotInit)?;
+        Ok(storage::get_fee_promotion(&env))
+    }
+
     /// View: return the configured fee tiers for volume-based platform fee schedule.
     pub fn get_fee_tiers(env: Env) -> Result<Option<Vec<types::FeeTier>>, Error> {
         storage::get_admin(&env).ok_or(Error::NotInit)?;
@@ -757,10 +794,14 @@ impl PaymentDistributor {
             return Err(Error::InvalidAmount);
         }
 
-        let fee_bps_u32 = parse_fee_bps(amounts.get(3).ok_or(Error::InvalidAmount)?)?;
+        let default_fee_bps = parse_fee_bps(amounts.get(3).ok_or(Error::InvalidAmount)?)?;
         let paid_amount = amounts.get(0).ok_or(Error::InvalidAmount)?;
         let investor_amount = amounts.get(2).ok_or(Error::InvalidAmount)?;
         let state = get_distribution_state(&env, &escrow_contract, &invoice_id);
+        let payment_volume = paid_amount
+            .checked_sub(state.paid_distributed)
+            .ok_or(Error::InvalidAmount)?;
+        let fee_bps_u32 = select_fee_tier(&env, payment_volume, default_fee_bps);
 
         compute_split(
             paid_amount,
@@ -905,3 +946,5 @@ impl PaymentDistributor {
 mod integration_test;
 #[cfg(test)]
 mod test;
+#[cfg(test)]
+mod test_fee_promotion;

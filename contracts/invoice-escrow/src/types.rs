@@ -65,6 +65,8 @@ pub enum StorageKey {
     EscrowOutstanding(soroban_sdk::Symbol),
     CollateralReserve(soroban_sdk::Address),
     RepaymentReserve(soroban_sdk::Address),
+    /// Instance: maximum FX quote age in seconds for a supported currency.
+    CurrencyMaxAge(soroban_sdk::Symbol),
 }
 
 /// One multi-currency investment, normalised to the base currency at the FX
