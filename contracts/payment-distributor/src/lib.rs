@@ -4,6 +4,8 @@ extern crate alloc;
 
 mod errors;
 mod events;
+mod event_schema_tests;
+mod auth_tests;
 mod storage;
 mod types;
 

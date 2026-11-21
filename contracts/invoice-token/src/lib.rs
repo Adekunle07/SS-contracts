@@ -9,6 +9,8 @@
 mod constants;
 mod errors;
 mod events;
+mod event_schema_tests;
+mod auth_tests;
 mod fraction_balance;
 mod storage;
 mod types;
