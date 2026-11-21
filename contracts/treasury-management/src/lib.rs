@@ -239,7 +239,9 @@ impl TreasuryManagement {
             return 0;
         }
         match storage::get_last_allocation_ledger(&env) {
-            Some(last) => last.saturating_add(cooldown).saturating_sub(env.ledger().sequence()),
+            Some(last) => last
+                .saturating_add(cooldown)
+                .saturating_sub(env.ledger().sequence()),
             None => 0,
         }
     }

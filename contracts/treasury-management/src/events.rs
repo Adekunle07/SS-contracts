@@ -23,6 +23,20 @@ pub fn funds_allocated(env: &Env, destination: &Address, amount: i128, purpose: 
     env.events().publish(topics, (amount, purpose.clone()));
 }
 
+/// Emitted when an allocation starts a cooldown window.
+pub fn allocation_cooldown_started(
+    env: &Env,
+    current_ledger: u32,
+    cooldown_ledgers: u32,
+    available_at_ledger: u32,
+) {
+    let topics = (Symbol::new(env, "AllocationCooldownStarted"),);
+    env.events().publish(
+        topics,
+        (current_ledger, cooldown_ledgers, available_at_ledger),
+    );
+}
+
 /// Emitted when a fee receipt is rejected due to allowlist or cap controls.
 pub fn source_rejected(env: &Env, source: &Address, amount: i128, reason: &Symbol) {
     let topics = (Symbol::new(env, "source_rejected"), source.clone());

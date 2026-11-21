@@ -29,4 +29,6 @@ pub enum Error {
     SourceCapExceeded = 10,
     /// Configured source cap must be strictly positive.
     InvalidCap = 11,
+    /// A previous allocation is still within the configured cooldown.
+    AllocationCooldownActive = 12,
 }

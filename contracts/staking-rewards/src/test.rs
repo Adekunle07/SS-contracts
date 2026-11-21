@@ -4,9 +4,7 @@ use soroban_sdk::{
     Address, BytesN, Env,
 };
 
-use crate::{
-    EpochStatus, Error, Invoice, StakingRewards, StakingRewardsClient, EPOCH_DURATION,
-};
+use crate::{EpochStatus, Error, Invoice, StakingRewards, StakingRewardsClient, EPOCH_DURATION};
 
 struct Setup {
     env: Env,
@@ -99,8 +97,10 @@ fn epoch_snapshots_funds_and_rolls_unclaimed_rewards_forward() {
 #[test]
 fn partial_claims_leave_the_unclaimed_share_and_rounding_dust_to_carry() {
     let s = setup();
-    s.client.stake_fractions(&s.first, &s.invoice_id, &100, &EPOCH_DURATION);
-    s.client.stake_fractions(&s.second, &s.invoice_id, &100, &EPOCH_DURATION);
+    s.client
+        .stake_fractions(&s.first, &s.invoice_id, &100, &EPOCH_DURATION);
+    s.client
+        .stake_fractions(&s.second, &s.invoice_id, &100, &EPOCH_DURATION);
     s.client.fund_staking_pool(&s.invoice_id, &101);
     let epoch = s.client.start_epoch(&s.invoice_id);
 
@@ -116,7 +116,8 @@ fn partial_claims_leave_the_unclaimed_share_and_rounding_dust_to_carry() {
 #[test]
 fn closed_epoch_cannot_be_claimed_or_closed_again() {
     let s = setup();
-    s.client.stake_fractions(&s.first, &s.invoice_id, &100, &EPOCH_DURATION);
+    s.client
+        .stake_fractions(&s.first, &s.invoice_id, &100, &EPOCH_DURATION);
     s.client.fund_staking_pool(&s.invoice_id, &100);
     let epoch = s.client.start_epoch(&s.invoice_id);
 
@@ -135,10 +136,12 @@ fn closed_epoch_cannot_be_claimed_or_closed_again() {
 #[test]
 fn stakes_added_after_epoch_start_are_not_eligible_for_that_epoch() {
     let s = setup();
-    s.client.stake_fractions(&s.first, &s.invoice_id, &100, &EPOCH_DURATION);
+    s.client
+        .stake_fractions(&s.first, &s.invoice_id, &100, &EPOCH_DURATION);
     s.client.fund_staking_pool(&s.invoice_id, &100);
     s.client.start_epoch(&s.invoice_id);
-    s.client.stake_fractions(&s.second, &s.invoice_id, &100, &EPOCH_DURATION);
+    s.client
+        .stake_fractions(&s.second, &s.invoice_id, &100, &EPOCH_DURATION);
 
     assert_eq!(s.client.claimable_amount(&1, &0), 0);
     assert_eq!(

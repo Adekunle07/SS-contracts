@@ -84,6 +84,31 @@ pub fn get_allocation_count(env: &Env) -> u32 {
         .unwrap_or(0)
 }
 
+pub fn get_allocation_cooldown(env: &Env) -> u32 {
+    env.storage()
+        .instance()
+        .get(&StorageKey::AllocationCooldown)
+        .unwrap_or(0)
+}
+
+pub fn set_allocation_cooldown(env: &Env, cooldown: u32) {
+    env.storage()
+        .instance()
+        .set(&StorageKey::AllocationCooldown, &cooldown);
+}
+
+pub fn get_last_allocation_ledger(env: &Env) -> Option<u32> {
+    env.storage()
+        .instance()
+        .get(&StorageKey::LastAllocationLedger)
+}
+
+pub fn set_last_allocation_ledger(env: &Env, ledger: u32) {
+    env.storage()
+        .instance()
+        .set(&StorageKey::LastAllocationLedger, &ledger);
+}
+
 pub fn get_allocation(env: &Env, index: u32) -> Option<AllocationRecord> {
     let key = StorageKey::Allocation(index);
     let data = env.storage().persistent().get(&key);
