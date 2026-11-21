@@ -4,8 +4,6 @@ extern crate alloc;
 
 mod errors;
 mod events;
-mod event_schema_tests;
-mod auth_tests;
 mod storage;
 mod types;
 
@@ -950,3 +948,7 @@ mod integration_test;
 mod test;
 #[cfg(test)]
 mod test_fee_promotion;
+#[cfg(test)]
+mod event_schema_tests;
+#[cfg(test)]
+mod auth_tests;

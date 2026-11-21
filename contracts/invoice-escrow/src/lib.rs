@@ -12,9 +12,6 @@ mod custody;
 mod deprecation;
 mod errors;
 mod events;
-mod event_schema_tests;
-mod auth_tests;
-mod integration_fixtures;
 mod investor_cap;
 mod math;
 mod storage;
@@ -386,12 +383,12 @@ impl InvoiceEscrow {
     /// View: return deprecation records for all deprecated entrypoints.
     /// Returns a vector of deprecation metadata including replacement guidance.
     pub fn get_deprecation_records(env: Env) -> soroban_sdk::Vec<deprecation::DeprecationRecord> {
-        deprecation::DeprecationRecord::all()
+        deprecation::all_deprecation_records(&env)
     }
 
     /// View: check if a specific method is deprecated.
     pub fn is_method_deprecated(env: Env, method: Symbol) -> bool {
-        deprecation::is_deprecated(&method)
+        deprecation::is_deprecated(&env, &method)
     }
 
     /// Create a single-token escrow for legacy callers. Caller (seller) must be authenticated.
@@ -2948,6 +2945,15 @@ pub mod oracle_adapter;
 
 #[cfg(test)]
 mod test_batch_features;
+
+#[cfg(test)]
+mod event_schema_tests;
+
+#[cfg(test)]
+mod auth_tests;
+
+#[cfg(test)]
+mod integration_fixtures;
 
 pub use earnest_deposit::{EarnestDeposit, EarnestDepositConfig, EarnestError, EarnestStatus};
 pub use insurance_pool::{InsuranceConfig, InsurancePool, InsuranceStorageKey};

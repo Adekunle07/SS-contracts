@@ -4,7 +4,7 @@
 //! Each deprecated method is annotated with its replacement, the version
 //! it was deprecated in, and the target removal version.
 
-use soroban_sdk::{contracttype, String, Symbol};
+use soroban_sdk::{contracttype, String, Symbol, Vec, Env};
 
 /// Deprecation status for a public entrypoint.
 #[contracttype]
@@ -37,82 +37,79 @@ pub struct DeprecationRecord {
     pub min_warning_days: u32,
 }
 
-impl DeprecationRecord {
-    /// Returns the deprecation record for `create_escrow_legacy`.
-    pub fn create_escrow_legacy() -> Self {
-        Self {
-            method: Symbol::new(&soroban_sdk::Env::default(), "create_escrow_legacy"),
-            deprecated_since: String::from_str(&soroban_sdk::Env::default(), "1.2.0"),
-            removal_target: String::from_str(&soroban_sdk::Env::default(), "2.0.0"),
-            replacement: Symbol::new(&soroban_sdk::Env::default(), "create_escrow"),
-            guidance: String::from_str(
-                &soroban_sdk::Env::default(),
-                "Use create_escrow with accepted_tokens parameter for multi-token support",
-            ),
-            min_warning_days: 90,
-        }
-    }
-
-    /// Returns the deprecation record for `fund_escrow_legacy`.
-    pub fn fund_escrow_legacy() -> Self {
-        Self {
-            method: Symbol::new(&soroban_sdk::Env::default(), "fund_escrow_legacy"),
-            deprecated_since: String::from_str(&soroban_sdk::Env::default(), "1.2.0"),
-            removal_target: String::from_str(&soroban_sdk::Env::default(), "2.0.0"),
-            replacement: Symbol::new(&soroban_sdk::Env::default(), "fund_escrow"),
-            guidance: String::from_str(
-                &soroban_sdk::Env::default(),
-                "Use fund_escrow with funding_token parameter to specify the payment token explicitly",
-            ),
-            min_warning_days: 90,
-        }
-    }
-
-    /// Returns the deprecation record for `create_escrow_with_tokens`.
-    pub fn create_escrow_with_tokens() -> Self {
-        Self {
-            method: Symbol::new(&soroban_sdk::Env::default(), "create_escrow_with_tokens"),
-            deprecated_since: String::from_str(&soroban_sdk::Env::default(), "1.2.0"),
-            removal_target: String::from_str(&soroban_sdk::Env::default(), "2.0.0"),
-            replacement: Symbol::new(&soroban_sdk::Env::default(), "create_escrow"),
-            guidance: String::from_str(
-                &soroban_sdk::Env::default(),
-                "Alias for create_escrow; use create_escrow directly",
-            ),
-            min_warning_days: 90,
-        }
-    }
-
-    /// Returns the deprecation record for `fund_escrow_with_token`.
-    pub fn fund_escrow_with_token() -> Self {
-        Self {
-            method: Symbol::new(&soroban_sdk::Env::default(), "fund_escrow_with_token"),
-            deprecated_since: String::from_str(&soroban_sdk::Env::default(), "1.2.0"),
-            removal_target: String::from_str(&soroban_sdk::Env::default(), "2.0.0"),
-            replacement: Symbol::new(&soroban_sdk::Env::default(), "fund_escrow"),
-            guidance: String::from_str(
-                &soroban_sdk::Env::default(),
-                "Alias for fund_escrow; use fund_escrow directly",
-            ),
-            min_warning_days: 90,
-        }
-    }
-
-    /// Returns all deprecation records for this contract.
-    pub fn all() -> soroban_sdk::Vec<Self> {
-        let env = soroban_sdk::Env::default();
-        let mut vec = soroban_sdk::Vec::new(&env);
-        vec.push_back(Self::create_escrow_legacy());
-        vec.push_back(Self::fund_escrow_legacy());
-        vec.push_back(Self::create_escrow_with_tokens());
-        vec.push_back(Self::fund_escrow_with_token());
-        vec
+/// Creates the deprecation record for `create_escrow_legacy`.
+pub fn create_escrow_legacy_record(env: &Env) -> DeprecationRecord {
+    DeprecationRecord {
+        method: Symbol::new(env, "create_escrow_legacy"),
+        deprecated_since: String::from_str(env, "1.2.0"),
+        removal_target: String::from_str(env, "2.0.0"),
+        replacement: Symbol::new(env, "create_escrow"),
+        guidance: String::from_str(
+            env,
+            "Use create_escrow with accepted_tokens parameter for multi-token support",
+        ),
+        min_warning_days: 90,
     }
 }
 
+/// Creates the deprecation record for `fund_escrow_legacy`.
+pub fn fund_escrow_legacy_record(env: &Env) -> DeprecationRecord {
+    DeprecationRecord {
+        method: Symbol::new(env, "fund_escrow_legacy"),
+        deprecated_since: String::from_str(env, "1.2.0"),
+        removal_target: String::from_str(env, "2.0.0"),
+        replacement: Symbol::new(env, "fund_escrow"),
+        guidance: String::from_str(
+            env,
+            "Use fund_escrow with funding_token parameter to specify the payment token explicitly",
+        ),
+        min_warning_days: 90,
+    }
+}
+
+/// Creates the deprecation record for `create_escrow_with_tokens`.
+pub fn create_escrow_with_tokens_record(env: &Env) -> DeprecationRecord {
+    DeprecationRecord {
+        method: Symbol::new(env, "create_escrow_with_tokens"),
+        deprecated_since: String::from_str(env, "1.2.0"),
+        removal_target: String::from_str(env, "2.0.0"),
+        replacement: Symbol::new(env, "create_escrow"),
+        guidance: String::from_str(
+            env,
+            "Alias for create_escrow; use create_escrow directly",
+        ),
+        min_warning_days: 90,
+    }
+}
+
+/// Creates the deprecation record for `fund_escrow_with_token`.
+pub fn fund_escrow_with_token_record(env: &Env) -> DeprecationRecord {
+    DeprecationRecord {
+        method: Symbol::new(env, "fund_escrow_with_token"),
+        deprecated_since: String::from_str(env, "1.2.0"),
+        removal_target: String::from_str(env, "2.0.0"),
+        replacement: Symbol::new(env, "fund_escrow"),
+        guidance: String::from_str(
+            env,
+            "Alias for fund_escrow; use fund_escrow directly",
+        ),
+        min_warning_days: 90,
+    }
+}
+
+/// Returns all deprecation records for this contract.
+pub fn all_deprecation_records(env: &Env) -> Vec<DeprecationRecord> {
+    let mut vec = Vec::new(env);
+    vec.push_back(create_escrow_legacy_record(env));
+    vec.push_back(fund_escrow_legacy_record(env));
+    vec.push_back(create_escrow_with_tokens_record(env));
+    vec.push_back(fund_escrow_with_token_record(env));
+    vec
+}
+
 /// Checks if an entrypoint is deprecated and returns its record if so.
-pub fn get_deprecation_record(method: &Symbol) -> Option<DeprecationRecord> {
-    for record in DeprecationRecord::all().iter() {
+pub fn get_deprecation_record(env: &Env, method: &Symbol) -> Option<DeprecationRecord> {
+    for record in all_deprecation_records(env).iter() {
         if &record.method == method {
             return Some(record);
         }
@@ -121,6 +118,6 @@ pub fn get_deprecation_record(method: &Symbol) -> Option<DeprecationRecord> {
 }
 
 /// Returns true if the given method is deprecated.
-pub fn is_deprecated(method: &Symbol) -> bool {
-    get_deprecation_record(method).is_some()
+pub fn is_deprecated(env: &Env, method: &Symbol) -> bool {
+    get_deprecation_record(env, method).is_some()
 }

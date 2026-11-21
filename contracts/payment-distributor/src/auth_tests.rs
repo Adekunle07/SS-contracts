@@ -10,6 +10,7 @@ use super::*;
 use soroban_sdk::testutils::{Address as _, Events, Ledger};
 use soroban_sdk::{
     contract, contractimpl, Address, BytesN, Env, IntoVal, Symbol, TryFromVal, Val, Vec,
+    token,
 };
 
 use crate::errors::Error;

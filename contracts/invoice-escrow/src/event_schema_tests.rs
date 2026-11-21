@@ -20,6 +20,23 @@ use soroban_sdk::{
     contract, contractimpl, Address, BytesN, Env, IntoVal, Symbol, TryFromVal, Val, Vec,
 };
 
+/// Mock invoice token for testing
+#[contract]
+struct MockInvoiceToken;
+
+#[contractimpl]
+impl MockInvoiceToken {
+    pub fn mint(env: Env, to: Address, amount: i128, _by: Address) {
+        env.storage().instance().set(&to, &amount);
+    }
+
+    pub fn set_transfer_locked(_env: Env, _caller: Address, _locked: bool) {}
+
+    pub fn decimals(_env: Env) -> u32 {
+        7
+    }
+}
+
 /// Helper to create a test commitment hash
 fn test_commitment(env: &Env, data: &str) -> BytesN<32> {
     let mut array = [0u8; 32];

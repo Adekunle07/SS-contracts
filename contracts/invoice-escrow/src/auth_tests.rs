@@ -15,6 +15,23 @@ use soroban_sdk::{
 
 use crate::errors::Error;
 
+/// Mock invoice token for testing
+#[contract]
+struct MockInvoiceToken;
+
+#[contractimpl]
+impl MockInvoiceToken {
+    pub fn mint(env: Env, to: Address, amount: i128, _by: Address) {
+        env.storage().instance().set(&to, &amount);
+    }
+
+    pub fn set_transfer_locked(_env: Env, _caller: Address, _locked: bool) {}
+
+    pub fn decimals(_env: Env) -> u32 {
+        7
+    }
+}
+
 /// Authorization role classification for test cases
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum AuthRole {

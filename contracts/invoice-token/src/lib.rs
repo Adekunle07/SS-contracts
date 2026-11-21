@@ -9,8 +9,6 @@
 mod constants;
 mod errors;
 mod events;
-mod event_schema_tests;
-mod auth_tests;
 mod fraction_balance;
 mod storage;
 mod types;
@@ -900,3 +898,7 @@ mod sep41_compliance;
 mod test;
 #[cfg(test)]
 mod test_storage_ttl;
+#[cfg(test)]
+mod event_schema_tests;
+#[cfg(test)]
+mod auth_tests;
