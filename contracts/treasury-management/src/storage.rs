@@ -108,3 +108,26 @@ pub fn push_allocation(env: &Env, record: &AllocationRecord) -> u32 {
         .set(&StorageKey::AllocationCount, &(index + 1));
     index
 }
+
+pub fn get_allocation_cooldown(env: &Env) -> u32 {
+    env.storage()
+        .instance()
+        .get(&StorageKey::AllocCool)
+        .unwrap_or(0)
+}
+
+pub fn set_allocation_cooldown(env: &Env, cooldown_ledgers: u32) {
+    env.storage()
+        .instance()
+        .set(&StorageKey::AllocCool, &cooldown_ledgers);
+}
+
+pub fn get_last_allocation_ledger(env: &Env) -> Option<u32> {
+    env.storage().instance().get(&StorageKey::LastAllocL)
+}
+
+pub fn set_last_allocation_ledger(env: &Env, ledger: u32) {
+    env.storage()
+        .instance()
+        .set(&StorageKey::LastAllocL, &ledger);
+}
