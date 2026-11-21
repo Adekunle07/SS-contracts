@@ -253,7 +253,11 @@ impl UpgradeProxy {
     }
 
     /// Check upgrade dependency compatibility before proxy execution.
-    pub fn check_upgrade_dependencies(env: Env, contract_id: Address, version: u32) -> Result<bool, Error> {
+    pub fn check_upgrade_dependencies(
+        env: Env,
+        contract_id: Address,
+        version: u32,
+    ) -> Result<bool, Error> {
         events::upgrade_dependency_checked(&env, &contract_id, version, true);
         Ok(true)
     }

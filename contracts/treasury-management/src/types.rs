@@ -21,6 +21,10 @@ pub enum StorageKey {
     /// Instance: number of allocation records ever written, used as
     /// both the next record's index and the paginated log's length.
     AllocationCount,
+    /// Instance: minimum ledger interval between treasury allocations.
+    AllocationCooldown,
+    /// Instance: ledger of the last treasury allocation.
+    LastAllocationLedger,
     /// Persistent: one allocation record by its index.
     Allocation(u32),
     /// Instance: whether only approved sources can call `receive_fee`.
