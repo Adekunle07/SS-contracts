@@ -23,6 +23,16 @@ pub enum StorageKey {
     AllocationCount,
     /// Persistent: one allocation record by its index.
     Allocation(u32),
+    /// Instance: whether only approved sources can call `receive_fee`.
+    SourceAllowlistEnforced,
+    /// Persistent: whether a source address is approved.
+    ApprovedSource(Address),
+    /// Persistent: optional cumulative cap for a source address.
+    SourceCap(Address),
+    /// Persistent: cumulative fees received from a source.
+    SourceCumulativeTotal(Address),
+    /// Persistent: fees received from a source on a specific ledger day.
+    SourceDailyTotal(Address, u64),
 }
 
 /// One historical allocation of treasury funds to a destination.

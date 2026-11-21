@@ -494,3 +494,15 @@ pub fn currency_invested(
         (investor.clone(), currency.clone(), amount, base_amount),
     );
 }
+
+pub fn allocation_applied(
+    env: &Env,
+    invoice_id: &BytesN<32>,
+    strategy: crate::types::AllocationStrategy,
+    total_allocated: i128,
+) {
+    env.events().publish(
+        (Symbol::new(env, "allocation_applied"), invoice_id.clone()),
+        (strategy as u32, total_allocated),
+    );
+}

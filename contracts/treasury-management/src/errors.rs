@@ -23,4 +23,10 @@ pub enum Error {
     InvalidPurpose = 7,
     /// Arithmetic overflow while updating a balance or count.
     Overflow = 8,
+    /// Fee source is not on the approved allowlist.
+    SourceNotApproved = 9,
+    /// Fee receipt would exceed the source's configured cap.
+    SourceCapExceeded = 10,
+    /// Configured source cap must be strictly positive.
+    InvalidCap = 11,
 }
