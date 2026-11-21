@@ -109,11 +109,11 @@ fn claimable_for_stake(
         return Ok(0);
     }
 
-    if env
-        .storage()
-        .persistent()
-        .has(&DataKey::EpochClaimed(invoice_id.clone(), epoch.id, stake_id))
-    {
+    if env.storage().persistent().has(&DataKey::EpochClaimed(
+        invoice_id.clone(),
+        epoch.id,
+        stake_id,
+    )) {
         return Ok(0);
     }
 
@@ -244,10 +244,9 @@ impl StakingRewards {
                 unlock_at,
             },
         );
-        env.storage().persistent().set(
-            &DataKey::TotalStaked(invoice_id.clone()),
-            &new_total,
-        );
+        env.storage()
+            .persistent()
+            .set(&DataKey::TotalStaked(invoice_id.clone()), &new_total);
         env.events().publish(
             (Symbol::new(&env, "StakeCreated"), id),
             (invoice_id, amount, unlock_at),
@@ -376,30 +375,18 @@ impl StakingRewards {
                 invoice_id,
                 epoch_id,
             ),
-            (
-                epoch.claimed_amount,
-                carry_over,
-                env.ledger().timestamp(),
-            ),
+            (epoch.claimed_amount, carry_over, env.ledger().timestamp()),
         );
         Ok(carry_over)
     }
 
     /// Return the stored state and immutable snapshots for an epoch.
-    pub fn epoch_status(
-        env: Env,
-        invoice_id: BytesN<32>,
-        epoch_id: u64,
-    ) -> Result<Epoch, Error> {
+    pub fn epoch_status(env: Env, invoice_id: BytesN<32>, epoch_id: u64) -> Result<Epoch, Error> {
         load_epoch(&env, &invoice_id, epoch_id)
     }
 
     /// Return the amount a stake can claim before its active epoch ends.
-    pub fn claimable_amount(
-        env: Env,
-        stake_id: u64,
-        epoch_id: u64,
-    ) -> Result<i128, Error> {
+    pub fn claimable_amount(env: Env, stake_id: u64, epoch_id: u64) -> Result<i128, Error> {
         let stake: Stake = env
             .storage()
             .persistent()
@@ -453,10 +440,9 @@ impl StakingRewards {
             .checked_add(reward)
             .ok_or(Error::Overflow)?;
         env.storage().persistent().set(&claim_key, &true);
-        env.storage().persistent().set(
-            &DataKey::Epoch(stake.invoice_id.clone(), epoch_id),
-            &epoch,
-        );
+        env.storage()
+            .persistent()
+            .set(&DataKey::Epoch(stake.invoice_id.clone(), epoch_id), &epoch);
         let invoice: Invoice = env
             .storage()
             .persistent()
@@ -468,7 +454,11 @@ impl StakingRewards {
             &reward,
         );
         env.events().publish(
-            (Symbol::new(&env, "staking_reward_claimed"), stake_id, epoch_id),
+            (
+                Symbol::new(&env, "staking_reward_claimed"),
+                stake_id,
+                epoch_id,
+            ),
             (wallet, reward),
         );
         Ok(reward)
@@ -499,8 +489,7 @@ impl StakingRewards {
         {
             let mut epoch = load_epoch(&env, &stake.invoice_id, epoch_id)?;
             if env.ledger().timestamp() < epoch.ends_at {
-                let claim_key =
-                    DataKey::EpochClaimed(stake.invoice_id.clone(), epoch_id, stake_id);
+                let claim_key = DataKey::EpochClaimed(stake.invoice_id.clone(), epoch_id, stake_id);
                 if !env.storage().persistent().has(&claim_key) {
                     reward =
                         claimable_for_stake(&env, &stake.invoice_id, stake_id, &stake, &epoch)?;
@@ -510,10 +499,9 @@ impl StakingRewards {
                             .checked_add(reward)
                             .ok_or(Error::Overflow)?;
                         env.storage().persistent().set(&claim_key, &true);
-                        env.storage().persistent().set(
-                            &DataKey::Epoch(stake.invoice_id.clone(), epoch_id),
-                            &epoch,
-                        );
+                        env.storage()
+                            .persistent()
+                            .set(&DataKey::Epoch(stake.invoice_id.clone(), epoch_id), &epoch);
                     }
                 }
             }
@@ -528,22 +516,16 @@ impl StakingRewards {
             .checked_sub(stake.amount)
             .filter(|total| *total >= 0)
             .ok_or(Error::StakeAccountingMismatch)?;
-        let total = stake
-            .amount
-            .checked_add(reward)
-            .ok_or(Error::Overflow)?;
+        let total = stake.amount.checked_add(reward).ok_or(Error::Overflow)?;
         token::Client::new(&env, &invoice.token).transfer(
             &env.current_contract_address(),
             &stake.wallet,
             &total,
         );
-        env.storage().persistent().set(
-            &DataKey::TotalStaked(stake.invoice_id.clone()),
-            &new_total,
-        );
         env.storage()
             .persistent()
-            .remove(&DataKey::Stake(stake_id));
+            .set(&DataKey::TotalStaked(stake.invoice_id.clone()), &new_total);
+        env.storage().persistent().remove(&DataKey::Stake(stake_id));
         env.events().publish(
             (Symbol::new(&env, "StakeReleased"), stake_id),
             (stake.amount, reward),
