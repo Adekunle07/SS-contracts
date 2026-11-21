@@ -133,7 +133,8 @@ fn test_downgrade_grace_period_and_renewal_cancellation() {
 
     // Propose again and advance ledger past grace boundary -> executes once
     client.propose_downgrade(&admin, &issuer, &low_quality_factors(&env));
-    env.ledger().set_sequence_number(env.ledger().sequence() + 10);
+    env.ledger()
+        .set_sequence_number(env.ledger().sequence() + 10);
     let updated = client.execute_pending_downgrade(&admin, &issuer);
     assert_eq!(updated.tier, CreditTier::C);
     assert_eq!(client.get_credit_score(&issuer).tier, CreditTier::C);

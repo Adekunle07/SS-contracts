@@ -2627,9 +2627,10 @@ impl InvoiceEscrow {
             .get(&types::StorageKey::SettleTtl)
             .unwrap_or(17_280u32);
         let expires_at = env.ledger().sequence().saturating_add(ttl);
-        env.storage()
-            .persistent()
-            .set(&types::StorageKey::SettleExp(invoice_id.clone()), &expires_at);
+        env.storage().persistent().set(
+            &types::StorageKey::SettleExp(invoice_id.clone()),
+            &expires_at,
+        );
         events::settlement_proposed(env, invoice_id, admin, repayment_amount);
         Ok(())
     }
@@ -2937,7 +2938,8 @@ impl InvoiceEscrow {
         strategy: AllocationStrategy,
     ) -> Result<(), Error> {
         caller.require_auth();
-        let invoice = storage::get_invoice(&env, invoice_id.clone()).ok_or(Error::EscrowNotFound)?;
+        let invoice =
+            storage::get_invoice(&env, invoice_id.clone()).ok_or(Error::EscrowNotFound)?;
         let cfg = storage::get_config(&env).ok_or(Error::NotInit)?;
         if caller != invoice.seller && caller != cfg.admin {
             return Err(Error::Unauthorized);
@@ -2967,7 +2969,8 @@ impl InvoiceEscrow {
         invoice_id: BytesN<32>,
         requests: Vec<(Address, i128)>,
     ) -> Result<Vec<AllocationPreview>, Error> {
-        let invoice = storage::get_invoice(&env, invoice_id.clone()).ok_or(Error::EscrowNotFound)?;
+        let invoice =
+            storage::get_invoice(&env, invoice_id.clone()).ok_or(Error::EscrowNotFound)?;
         if invoice.status != InvoiceStatus::Open {
             return Err(Error::InvalidInvoiceStatus);
         }
@@ -3033,9 +3036,7 @@ impl InvoiceEscrow {
                             Some(cap) => cap.saturating_sub(existing),
                             None => i128::MAX,
                         };
-                        let share = req
-                            .checked_mul(initial_remaining)
-                            .ok_or(Error::Overflow)?
+                        let share = req.checked_mul(initial_remaining).ok_or(Error::Overflow)?
                             / total_requested;
                         let alloc = share.min(cap_room).min(remaining).max(0);
                         allocated_sum = allocated_sum.checked_add(alloc).ok_or(Error::Overflow)?;
@@ -3084,13 +3085,19 @@ impl InvoiceEscrow {
         let token_client = token::Client::new(&env, &invoice.token);
         for item in previews.iter() {
             if item.allocated > 0 {
-                token_client.transfer(&item.investor, env.current_contract_address(), &item.allocated);
+                token_client.transfer(
+                    &item.investor,
+                    env.current_contract_address(),
+                    &item.allocated,
+                );
                 let prev_pos = storage::get_investor_position(&env, &invoice_id, &item.investor);
                 storage::set_investor_position(
                     &env,
                     &invoice_id,
                     &item.investor,
-                    prev_pos.checked_add(item.allocated).ok_or(Error::Overflow)?,
+                    prev_pos
+                        .checked_add(item.allocated)
+                        .ok_or(Error::Overflow)?,
                 );
                 let prev_alloc = Self::get_funded_allocation(
                     env.clone(),
@@ -3099,7 +3106,9 @@ impl InvoiceEscrow {
                 );
                 env.storage().persistent().set(
                     &types::StorageKey::FundAlloc(invoice_id.clone(), item.investor.clone()),
-                    &(prev_alloc.checked_add(item.allocated).ok_or(Error::Overflow)?),
+                    &(prev_alloc
+                        .checked_add(item.allocated)
+                        .ok_or(Error::Overflow)?),
                 );
             }
         }
@@ -3111,6 +3120,7 @@ impl InvoiceEscrow {
         storage::set_invoice(&env, invoice_id.clone(), &invoice);
         events::allocation_applied(&env, &invoice_id, strategy, total_allocated);
         Ok(previews)
+    }
 
     /// Implement invoice settlement escrow release with on-time bonus distribution (#730)
     pub fn release_escrow_with_bonus(
