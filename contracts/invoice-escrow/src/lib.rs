@@ -27,9 +27,11 @@ use types::SettlementProposal;
 pub use types::AllocationPreview;
 pub use types::AllocationStrategy;
 pub use types::EscrowStatus;
+pub use types::FeeSnapshot;
 pub use types::FundingStatus;
 pub use types::InstallmentMilestone;
 pub use types::InvoiceCategory;
+pub use types::SettlementProposalStatus;
 use types::{
     CategoryFeeSchedule, Config, DisputeData, EscrowData, FundingInvoice, InstallmentInput,
     InvestmentRecord, InvoiceData, InvoiceStatus,
@@ -1954,6 +1956,9 @@ impl InvoiceEscrow {
 
         storage::set_invoice_record(&env, &invoice_id, &data);
         storage::set_investor_count(&env, &invoice_id, 0);
+        if let Some(cfg) = storage::get_config(&env) {
+            Self::record_fee_snapshot(&env, &invoice_id, cfg.fee_bps, cfg.fee_bps, 0)?;
+        }
         events::invoice_registered(
             &env,
             &invoice_id,
@@ -2616,6 +2621,15 @@ impl InvoiceEscrow {
                 repayment_amount,
             },
         );
+        let ttl: u32 = env
+            .storage()
+            .instance()
+            .get(&types::StorageKey::SettleTtl)
+            .unwrap_or(17_280u32);
+        let expires_at = env.ledger().sequence().saturating_add(ttl);
+        env.storage()
+            .persistent()
+            .set(&types::StorageKey::SettleExp(invoice_id.clone()), &expires_at);
         events::settlement_proposed(env, invoice_id, admin, repayment_amount);
         Ok(())
     }
@@ -2634,11 +2648,23 @@ impl InvoiceEscrow {
         }
         let proposal = storage::get_settlement_proposal(&env, &invoice_id)
             .ok_or(Error::SettlementNotProposed)?;
+        if let Some(expires_at) = env
+            .storage()
+            .persistent()
+            .get::<types::StorageKey, u32>(&types::StorageKey::SettleExp(invoice_id.clone()))
+        {
+            if env.ledger().sequence() > expires_at {
+                return Err(Error::SettlementProposalExpired);
+            }
+        }
         if proposal.proposer == admin {
             return Err(Error::SameAdminApproval);
         }
         Self::execute_settlement(&env, &invoice_id, proposal.repayment_amount)?;
         storage::remove_settlement_proposal(&env, &invoice_id);
+        env.storage()
+            .persistent()
+            .remove(&types::StorageKey::SettleExp(invoice_id.clone()));
         events::settlement_approved(&env, &invoice_id, &admin, proposal.repayment_amount);
         Ok(())
     }

@@ -177,7 +177,19 @@ impl TreasuryManagement {
         if amount > total {
             return Err(Error::InsufficientBalance);
         }
+
+        let current_ledger = env.ledger().sequence();
+        let cooldown = storage::get_allocation_cooldown(&env);
+        if cooldown > 0 {
+            if let Some(last_ledger) = storage::get_last_allocation_ledger(&env) {
+                if current_ledger < last_ledger.saturating_add(cooldown) {
+                    return Err(Error::AllocationCooldownActive);
+                }
+            }
+        }
+
         storage::set_total_balance(&env, total - amount);
+        storage::set_last_allocation_ledger(&env, current_ledger);
 
         let record = AllocationRecord {
             destination: destination.clone(),
@@ -187,8 +199,49 @@ impl TreasuryManagement {
         };
         let index = storage::push_allocation(&env, &record);
 
+        if cooldown > 0 {
+            events::allocation_cooldown_started(
+                &env,
+                current_ledger,
+                cooldown,
+                current_ledger.saturating_add(cooldown),
+            );
+        }
         events::funds_allocated(&env, &destination, amount, &purpose);
         Ok(index)
+    }
+
+    pub fn set_allocation_cooldown(
+        env: Env,
+        admin: Address,
+        cooldown_ledgers: u32,
+    ) -> Result<(), Error> {
+        let stored_admin = storage::get_admin(&env).ok_or(Error::NotInit)?;
+        if admin != stored_admin {
+            return Err(Error::Unauthorized);
+        }
+        admin.require_auth();
+        storage::set_allocation_cooldown(&env, cooldown_ledgers);
+        Ok(())
+    }
+
+    pub fn get_allocation_cooldown(env: Env) -> u32 {
+        storage::get_allocation_cooldown(&env)
+    }
+
+    pub fn get_last_allocation_ledger(env: Env) -> Option<u32> {
+        storage::get_last_allocation_ledger(&env)
+    }
+
+    pub fn get_remaining_cooldown(env: Env) -> u32 {
+        let cooldown = storage::get_allocation_cooldown(&env);
+        if cooldown == 0 {
+            return 0;
+        }
+        match storage::get_last_allocation_ledger(&env) {
+            Some(last) => last.saturating_add(cooldown).saturating_sub(env.ledger().sequence()),
+            None => 0,
+        }
     }
 
     /// View: total treasury balance and a per-source breakdown.
