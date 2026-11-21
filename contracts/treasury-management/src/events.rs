@@ -23,13 +23,21 @@ pub fn funds_allocated(env: &Env, destination: &Address, amount: i128, purpose: 
     env.events().publish(topics, (amount, purpose.clone()));
 }
 
-pub fn allocation_cooldown_started(
+/// Emitted when a fee receipt is rejected due to allowlist or cap controls.
+pub fn source_rejected(env: &Env, source: &Address, amount: i128, reason: &Symbol) {
+    let topics = (Symbol::new(env, "source_rejected"), source.clone());
+    env.events().publish(topics, (amount, reason.clone()));
+}
+
+/// Emitted when a fee receipt passes source allowlist and cap checks.
+pub fn source_fee_received(
     env: &Env,
-    ledger: u32,
-    cooldown_ledgers: u32,
-    unlock_ledger: u32,
+    source: &Address,
+    amount: i128,
+    daily_total: i128,
+    cumulative_total: i128,
 ) {
-    let topics = (Symbol::new(env, "allocation_cooldown_started"),);
+    let topics = (Symbol::new(env, "source_fee_received"), source.clone());
     env.events()
-        .publish(topics, (ledger, cooldown_ledgers, unlock_ledger));
+        .publish(topics, (amount, daily_total, cumulative_total));
 }

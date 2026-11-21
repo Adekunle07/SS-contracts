@@ -109,25 +109,81 @@ pub fn push_allocation(env: &Env, record: &AllocationRecord) -> u32 {
     index
 }
 
-pub fn get_allocation_cooldown(env: &Env) -> u32 {
+pub fn is_allowlist_enforced(env: &Env) -> bool {
     env.storage()
         .instance()
-        .get(&StorageKey::AllocCool)
+        .get(&StorageKey::SourceAllowlistEnforced)
+        .unwrap_or(false)
+}
+
+pub fn set_allowlist_enforced(env: &Env, enforced: bool) {
+    env.storage()
+        .instance()
+        .set(&StorageKey::SourceAllowlistEnforced, &enforced);
+}
+
+pub fn is_source_approved(env: &Env, source: &Address) -> bool {
+    env.storage()
+        .persistent()
+        .get(&StorageKey::ApprovedSource(source.clone()))
+        .unwrap_or(false)
+}
+
+pub fn set_source_approved(env: &Env, source: &Address, approved: bool) {
+    let key = StorageKey::ApprovedSource(source.clone());
+    env.storage().persistent().set(&key, &approved);
+    env.storage()
+        .persistent()
+        .extend_ttl(&key, TTL_THRESHOLD, MIN_TTL_EXTEND);
+}
+
+pub fn get_source_cap(env: &Env, source: &Address) -> Option<i128> {
+    env.storage()
+        .persistent()
+        .get(&StorageKey::SourceCap(source.clone()))
+}
+
+pub fn set_source_cap(env: &Env, source: &Address, cap: Option<i128>) {
+    let key = StorageKey::SourceCap(source.clone());
+    match cap {
+        Some(c) => {
+            env.storage().persistent().set(&key, &c);
+            env.storage()
+                .persistent()
+                .extend_ttl(&key, TTL_THRESHOLD, MIN_TTL_EXTEND);
+        }
+        None => {
+            env.storage().persistent().remove(&key);
+        }
+    }
+}
+
+pub fn get_source_cumulative_total(env: &Env, source: &Address) -> i128 {
+    env.storage()
+        .persistent()
+        .get(&StorageKey::SourceCumulativeTotal(source.clone()))
         .unwrap_or(0)
 }
 
-pub fn set_allocation_cooldown(env: &Env, cooldown_ledgers: u32) {
+pub fn set_source_cumulative_total(env: &Env, source: &Address, total: i128) {
+    let key = StorageKey::SourceCumulativeTotal(source.clone());
+    env.storage().persistent().set(&key, &total);
     env.storage()
-        .instance()
-        .set(&StorageKey::AllocCool, &cooldown_ledgers);
+        .persistent()
+        .extend_ttl(&key, TTL_THRESHOLD, MIN_TTL_EXTEND);
 }
 
-pub fn get_last_allocation_ledger(env: &Env) -> Option<u32> {
-    env.storage().instance().get(&StorageKey::LastAllocL)
+pub fn get_source_daily_total(env: &Env, source: &Address, ledger_day: u64) -> i128 {
+    env.storage()
+        .persistent()
+        .get(&StorageKey::SourceDailyTotal(source.clone(), ledger_day))
+        .unwrap_or(0)
 }
 
-pub fn set_last_allocation_ledger(env: &Env, ledger: u32) {
+pub fn set_source_daily_total(env: &Env, source: &Address, ledger_day: u64, total: i128) {
+    let key = StorageKey::SourceDailyTotal(source.clone(), ledger_day);
+    env.storage().persistent().set(&key, &total);
     env.storage()
-        .instance()
-        .set(&StorageKey::LastAllocL, &ledger);
+        .persistent()
+        .extend_ttl(&key, TTL_THRESHOLD, MIN_TTL_EXTEND);
 }

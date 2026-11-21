@@ -24,6 +24,8 @@ pub use types::MultiSigConfig;
 use types::SettlementProposal;
 
 // EscrowStatus is re-exported publicly; Config, EscrowData, and InvoiceData are crate-private.
+pub use types::AllocationPreview;
+pub use types::AllocationStrategy;
 pub use types::EscrowStatus;
 pub use types::FeeSnapshot;
 pub use types::FundingStatus;
@@ -2926,162 +2928,189 @@ impl InvoiceEscrow {
         Ok(removed)
     }
 
-    // ── Issue #752: Settlement proposal deadline & cancellation ──────────────
+    // ── Issue #755: Invoice funding allocation buckets (FIFO & pro-rata) ──────
 
-    pub fn set_settlement_proposal_ttl(
-        env: Env,
-        admin: Address,
-        ttl_ledgers: u32,
-    ) -> Result<(), Error> {
-        let cfg = storage::get_config(&env).ok_or(Error::NotInit)?;
-        if admin != cfg.admin {
-            return Err(Error::Unauthorized);
-        }
-        admin.require_auth();
-        if ttl_ledgers == 0 {
-            return Err(Error::InvalidDuration);
-        }
-        env.storage()
-            .instance()
-            .set(&types::StorageKey::SettleTtl, &ttl_ledgers);
-        Ok(())
-    }
-
-    pub fn cancel_settlement_proposal(
+    pub fn set_allocation_strategy(
         env: Env,
         caller: Address,
         invoice_id: BytesN<32>,
+        strategy: AllocationStrategy,
     ) -> Result<(), Error> {
         caller.require_auth();
-        let proposal = storage::get_settlement_proposal(&env, &invoice_id)
-            .ok_or(Error::SettlementNotProposed)?;
-        let is_admin = storage::get_config(&env)
-            .map(|c| c.admin == caller)
-            .unwrap_or(false);
-        if caller != proposal.proposer && !is_admin {
+        let invoice = storage::get_invoice(&env, invoice_id.clone()).ok_or(Error::EscrowNotFound)?;
+        let cfg = storage::get_config(&env).ok_or(Error::NotInit)?;
+        if caller != invoice.seller && caller != cfg.admin {
             return Err(Error::Unauthorized);
         }
-        storage::remove_settlement_proposal(&env, &invoice_id);
         env.storage()
             .persistent()
-            .remove(&types::StorageKey::SettleExp(invoice_id.clone()));
-        events::proposal_cancelled(&env, &invoice_id, &caller);
+            .set(&types::StorageKey::AllocStrat(invoice_id), &strategy);
         Ok(())
     }
 
-    pub fn get_settlement_proposal_status(
-        env: Env,
-        invoice_id: BytesN<32>,
-    ) -> Option<SettlementProposalStatus> {
-        let proposal = storage::get_settlement_proposal(&env, &invoice_id)?;
-        let expires_at = env
-            .storage()
-            .persistent()
-            .get(&types::StorageKey::SettleExp(invoice_id))
-            .unwrap_or(u32::MAX);
-        let now = env.ledger().sequence();
-        Some(SettlementProposalStatus {
-            proposer: proposal.proposer,
-            repayment_amount: proposal.repayment_amount,
-            expires_at_ledger: expires_at,
-            remaining_ttl: expires_at.saturating_sub(now),
-            expired: now > expires_at,
-        })
-    }
-
-    // ── Issue #754: Formal protocol fee schedule snapshot per invoice ────────
-
-    fn record_fee_snapshot(
-        env: &Env,
-        invoice_id: &BytesN<32>,
-        category_fee_bps: u32,
-        platform_fee_bps: u32,
-        distributor_fee_bps: u32,
-    ) -> Result<FeeSnapshot, Error> {
-        if category_fee_bps > MAX_BPS
-            || platform_fee_bps > MAX_BPS
-            || distributor_fee_bps > MAX_BPS
-        {
-            return Err(Error::InvalidFeeBps);
-        }
-        let effective_fee_bps = category_fee_bps;
-        let snap = FeeSnapshot {
-            category_fee_bps,
-            platform_fee_bps,
-            distributor_fee_bps,
-            effective_fee_bps,
-        };
-        let key = types::StorageKey::FeeSnap(invoice_id.clone());
-        let existed = env.storage().persistent().has(&key);
-        env.storage().persistent().set(&key, &snap);
-        if !existed {
-            let cnt: u32 = env
-                .storage()
-                .instance()
-                .get(&types::StorageKey::FeeSnapCnt)
-                .unwrap_or(0);
-            env.storage()
-                .instance()
-                .set(&types::StorageKey::FeeSnapCnt, &(cnt + 1));
-        }
-        events::fee_snapshot_created(env, invoice_id, effective_fee_bps);
-        Ok(snap)
-    }
-
-    pub fn snapshot_invoice_fees(
-        env: Env,
-        admin: Address,
-        invoice_id: BytesN<32>,
-        category_fee_bps: u32,
-        platform_fee_bps: u32,
-        distributor_fee_bps: u32,
-    ) -> Result<FeeSnapshot, Error> {
-        let cfg = storage::get_config(&env).ok_or(Error::NotInit)?;
-        if admin != cfg.admin {
-            return Err(Error::Unauthorized);
-        }
-        admin.require_auth();
-        Self::record_fee_snapshot(
-            &env,
-            &invoice_id,
-            category_fee_bps,
-            platform_fee_bps,
-            distributor_fee_bps,
-        )
-    }
-
-    pub fn get_invoice_fee_snapshot(env: Env, invoice_id: BytesN<32>) -> Option<FeeSnapshot> {
+    pub fn get_allocation_strategy(env: Env, invoice_id: BytesN<32>) -> AllocationStrategy {
         env.storage()
             .persistent()
-            .get(&types::StorageKey::FeeSnap(invoice_id))
+            .get(&types::StorageKey::AllocStrat(invoice_id))
+            .unwrap_or(AllocationStrategy::Fifo)
     }
 
-    pub fn fee_snapshot_count(env: Env) -> u32 {
+    pub fn get_funded_allocation(env: Env, invoice_id: BytesN<32>, investor: Address) -> i128 {
         env.storage()
-            .instance()
-            .get(&types::StorageKey::FeeSnapCnt)
+            .persistent()
+            .get(&types::StorageKey::FundAlloc(invoice_id, investor))
             .unwrap_or(0)
     }
 
-    pub fn preview_invoice_fee(
+    pub fn preview_allocation(
         env: Env,
         invoice_id: BytesN<32>,
-        amount: i128,
-    ) -> Result<i128, Error> {
-        if amount < 0 {
+        requests: Vec<(Address, i128)>,
+    ) -> Result<Vec<AllocationPreview>, Error> {
+        let invoice = storage::get_invoice(&env, invoice_id.clone()).ok_or(Error::EscrowNotFound)?;
+        if invoice.status != InvoiceStatus::Open {
+            return Err(Error::InvalidInvoiceStatus);
+        }
+        let strategy = Self::get_allocation_strategy(env.clone(), invoice_id.clone());
+        let mut remaining = invoice
+            .funding_target
+            .checked_sub(invoice.total_raised)
+            .ok_or(Error::Overflow)?;
+        if remaining <= 0 {
+            return Err(Error::InvalidInvoiceStatus);
+        }
+
+        let mut total_requested: i128 = 0;
+        for (_, req) in requests.iter() {
+            if req <= 0 {
+                return Err(Error::InvalidAmount);
+            }
+            total_requested = total_requested.checked_add(req).ok_or(Error::Overflow)?;
+        }
+
+        let mut out = Vec::new(&env);
+        match strategy {
+            AllocationStrategy::Fifo => {
+                for (investor, req) in requests.iter() {
+                    let existing = storage::get_investor_position(&env, &invoice_id, &investor);
+                    let cap_room = match invoice.per_investor_cap {
+                        Some(cap) => cap.saturating_sub(existing),
+                        None => i128::MAX,
+                    };
+                    let alloc = req.min(remaining).min(cap_room).max(0);
+                    remaining = remaining.checked_sub(alloc).ok_or(Error::Overflow)?;
+                    out.push_back(AllocationPreview {
+                        investor,
+                        requested: req,
+                        allocated: alloc,
+                        remaining_capacity: remaining,
+                    });
+                }
+            }
+            AllocationStrategy::ProRata => {
+                if total_requested <= remaining {
+                    for (investor, req) in requests.iter() {
+                        let existing = storage::get_investor_position(&env, &invoice_id, &investor);
+                        let cap_room = match invoice.per_investor_cap {
+                            Some(cap) => cap.saturating_sub(existing),
+                            None => i128::MAX,
+                        };
+                        let alloc = req.min(cap_room).max(0);
+                        remaining = remaining.checked_sub(alloc).ok_or(Error::Overflow)?;
+                        out.push_back(AllocationPreview {
+                            investor,
+                            requested: req,
+                            allocated: alloc,
+                            remaining_capacity: remaining,
+                        });
+                    }
+                } else {
+                    let initial_remaining = remaining;
+                    let mut allocated_sum: i128 = 0;
+                    for (investor, req) in requests.iter() {
+                        let existing = storage::get_investor_position(&env, &invoice_id, &investor);
+                        let cap_room = match invoice.per_investor_cap {
+                            Some(cap) => cap.saturating_sub(existing),
+                            None => i128::MAX,
+                        };
+                        let share = req
+                            .checked_mul(initial_remaining)
+                            .ok_or(Error::Overflow)?
+                            / total_requested;
+                        let alloc = share.min(cap_room).min(remaining).max(0);
+                        allocated_sum = allocated_sum.checked_add(alloc).ok_or(Error::Overflow)?;
+                        remaining = remaining.checked_sub(alloc).ok_or(Error::Overflow)?;
+                        out.push_back(AllocationPreview {
+                            investor,
+                            requested: req,
+                            allocated: alloc,
+                            remaining_capacity: remaining,
+                        });
+                    }
+                }
+            }
+        }
+        Ok(out)
+    }
+
+    pub fn fill_allocation_bucket(
+        env: Env,
+        invoice_id: BytesN<32>,
+        requests: Vec<(Address, i128)>,
+    ) -> Result<Vec<AllocationPreview>, Error> {
+        if requests.is_empty() {
             return Err(Error::InvalidAmount);
         }
-        let bps = if let Some(snap) = Self::get_invoice_fee_snapshot(env.clone(), invoice_id) {
-            snap.effective_fee_bps
-        } else {
-            // Legacy invoice fallback to live config
-            storage::get_config(&env).ok_or(Error::NotInit)?.fee_bps
-        };
-        amount
-            .checked_mul(i128::from(bps))
-            .ok_or(Error::Overflow)?
-            .checked_div(i128::from(MAX_BPS))
-            .ok_or(Error::Overflow)
+        let mut invoice =
+            storage::get_invoice(&env, invoice_id.clone()).ok_or(Error::EscrowNotFound)?;
+        let strategy = Self::get_allocation_strategy(env.clone(), invoice_id.clone());
+        let initial_remaining = invoice
+            .funding_target
+            .checked_sub(invoice.total_raised)
+            .ok_or(Error::Overflow)?;
+
+        let previews = Self::preview_allocation(env.clone(), invoice_id.clone(), requests)?;
+        let mut total_allocated: i128 = 0;
+        for item in previews.iter() {
+            item.investor.require_auth();
+            total_allocated = total_allocated
+                .checked_add(item.allocated)
+                .ok_or(Error::Overflow)?;
+        }
+        if total_allocated > initial_remaining {
+            return Err(Error::InvalidAmount);
+        }
+
+        let token_client = token::Client::new(&env, &invoice.token);
+        for item in previews.iter() {
+            if item.allocated > 0 {
+                token_client.transfer(&item.investor, env.current_contract_address(), &item.allocated);
+                let prev_pos = storage::get_investor_position(&env, &invoice_id, &item.investor);
+                storage::set_investor_position(
+                    &env,
+                    &invoice_id,
+                    &item.investor,
+                    prev_pos.checked_add(item.allocated).ok_or(Error::Overflow)?,
+                );
+                let prev_alloc = Self::get_funded_allocation(
+                    env.clone(),
+                    invoice_id.clone(),
+                    item.investor.clone(),
+                );
+                env.storage().persistent().set(
+                    &types::StorageKey::FundAlloc(invoice_id.clone(), item.investor.clone()),
+                    &(prev_alloc.checked_add(item.allocated).ok_or(Error::Overflow)?),
+                );
+            }
+        }
+
+        invoice.total_raised = invoice
+            .total_raised
+            .checked_add(total_allocated)
+            .ok_or(Error::Overflow)?;
+        storage::set_invoice(&env, invoice_id.clone(), &invoice);
+        events::allocation_applied(&env, &invoice_id, strategy, total_allocated);
+        Ok(previews)
     }
 }
 
@@ -3111,31 +3140,73 @@ pub use insurance_pool::{InsuranceConfig, InsurancePool, InsuranceStorageKey};
 pub use oracle_adapter::{CurrencyOracleConfig, OracleError, OraclePriceAdapter, PriceData};
 
 #[cfg(test)]
-mod settlement_and_fee_test {
+mod allocation_test {
     use super::*;
     use soroban_sdk::testutils::Address as _;
     use soroban_sdk::{BytesN, Env};
 
     #[test]
-    fn test_fee_snapshot_and_legacy_fallback() {
+    fn test_fifo_and_pro_rata_allocation_buckets() {
         let env = Env::default();
         env.mock_all_auths();
         let cid = env.register(InvoiceEscrow, ());
         let client = InvoiceEscrowClient::new(&env, &cid);
+
         let admin = Address::generate(&env);
-        client.initialize(&admin, &250u32);
+        let seller = Address::generate(&env);
+        let inv1 = Address::generate(&env);
+        let inv2 = Address::generate(&env);
+        let token_addr = env
+            .register_stellar_asset_contract_v2(admin.clone())
+            .address();
+        let token_admin = token::StellarAssetClient::new(&env, &token_addr);
+        token_admin.mint(&inv1, &10_000i128);
+        token_admin.mint(&inv2, &10_000i128);
 
-        let inv = BytesN::from_array(&env, &[5u8; 32]);
-        let legacy = BytesN::from_array(&env, &[6u8; 32]);
+        client.initialize(&admin, &100u32);
 
-        // Legacy fallback uses live config (250 bps)
-        assert_eq!(client.preview_invoice_fee(&legacy, &10_000i128), 250);
+        // FIFO test
+        let id_fifo = BytesN::from_array(&env, &[1u8; 32]);
+        client.create_invoice(
+            &id_fifo,
+            &seller,
+            &1_000i128,
+            &500i128,
+            &1_000i128,
+            &1_000u32,
+            &10i128,
+            &None,
+            &token_addr,
+        );
+        let mut reqs = Vec::new(&env);
+        reqs.push_back((inv1.clone(), 700i128));
+        reqs.push_back((inv2.clone(), 500i128));
+        let preview = client.preview_allocation(&id_fifo, &reqs);
+        let filled = client.fill_allocation_bucket(&id_fifo, &reqs);
+        assert_eq!(preview, filled);
+        assert_eq!(filled.get(0).unwrap().allocated, 700i128);
+        assert_eq!(filled.get(1).unwrap().allocated, 300i128);
+        assert_eq!(client.get_funded_allocation(&id_fifo, &inv2), 300i128);
 
-        // Snapshot freezes fee at 300 bps even when global config changes to 500
-        client.snapshot_invoice_fees(&admin, &inv, &300u32, &300u32, &50u32);
-        assert_eq!(client.fee_snapshot_count(), 1);
-        client.update_platform_fee_bps(&500u32);
-        assert_eq!(client.preview_invoice_fee(&inv, &10_000i128), 300);
-        assert_eq!(client.preview_invoice_fee(&legacy, &10_000i128), 500);
+        // Pro-rata test
+        let id_pr = BytesN::from_array(&env, &[2u8; 32]);
+        client.create_invoice(
+            &id_pr,
+            &seller,
+            &1_000i128,
+            &500i128,
+            &1_000i128,
+            &1_000u32,
+            &10i128,
+            &None,
+            &token_addr,
+        );
+        client.set_allocation_strategy(&seller, &id_pr, &AllocationStrategy::ProRata);
+        let mut reqs2 = Vec::new(&env);
+        reqs2.push_back((inv1.clone(), 1_000i128));
+        reqs2.push_back((inv2.clone(), 1_000i128));
+        let pr_filled = client.fill_allocation_bucket(&id_pr, &reqs2);
+        assert_eq!(pr_filled.get(0).unwrap().allocated, 500i128);
+        assert_eq!(pr_filled.get(1).unwrap().allocated, 500i128);
     }
 }

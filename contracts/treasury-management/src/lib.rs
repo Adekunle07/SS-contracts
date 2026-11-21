@@ -13,7 +13,7 @@ mod types;
 
 pub use types::{AllocationRecord, TreasuryBalance};
 
-use soroban_sdk::{contract, contractimpl, Address, Env, String, Vec};
+use soroban_sdk::{contract, contractimpl, Address, Env, String, Symbol, Vec};
 
 use errors::Error;
 
@@ -60,12 +60,90 @@ impl TreasuryManagement {
         }
         storage::get_admin(&env).ok_or(Error::NotInit)?;
 
+        if storage::is_allowlist_enforced(&env) && !storage::is_source_approved(&env, &source) {
+            events::source_rejected(&env, &source, amount, &Symbol::new(&env, "unapproved"));
+            return Err(Error::SourceNotApproved);
+        }
+
+        let prev_cum = storage::get_source_cumulative_total(&env, &source);
+        let new_cum = prev_cum.checked_add(amount).ok_or(Error::Overflow)?;
+        if let Some(cap) = storage::get_source_cap(&env, &source) {
+            if new_cum > cap {
+                events::source_rejected(&env, &source, amount, &Symbol::new(&env, "cap_exceeded"));
+                return Err(Error::SourceCapExceeded);
+            }
+        }
+
+        let ledger_day = env.ledger().timestamp() / 86_400;
+        let prev_daily = storage::get_source_daily_total(&env, &source, ledger_day);
+        let new_daily = prev_daily.checked_add(amount).ok_or(Error::Overflow)?;
+
         storage::credit_source(&env, &source, amount);
+        storage::set_source_cumulative_total(&env, &source, new_cum);
+        storage::set_source_daily_total(&env, &source, ledger_day, new_daily);
         let total = storage::get_total_balance(&env);
         storage::set_total_balance(&env, total.checked_add(amount).ok_or(Error::Overflow)?);
 
+        events::source_fee_received(&env, &source, amount, new_daily, new_cum);
         events::fee_received(&env, &source, amount);
         Ok(())
+    }
+
+    /// Admin-only: toggle whether `receive_fee` enforces the approved source allowlist.
+    pub fn set_source_allowlist_enforced(
+        env: Env,
+        admin: Address,
+        enforced: bool,
+    ) -> Result<(), Error> {
+        let stored_admin = storage::get_admin(&env).ok_or(Error::NotInit)?;
+        if admin != stored_admin {
+            return Err(Error::Unauthorized);
+        }
+        admin.require_auth();
+        storage::set_allowlist_enforced(&env, enforced);
+        Ok(())
+    }
+
+    /// Admin-only: approve or revoke a fee source and optionally set its aggregate cap.
+    pub fn set_approved_source(
+        env: Env,
+        admin: Address,
+        source: Address,
+        approved: bool,
+        cap: Option<i128>,
+    ) -> Result<(), Error> {
+        let stored_admin = storage::get_admin(&env).ok_or(Error::NotInit)?;
+        if admin != stored_admin {
+            return Err(Error::Unauthorized);
+        }
+        admin.require_auth();
+        ensure_non_zero_address(&env, &source)?;
+        if let Some(c) = cap {
+            if c <= 0 {
+                return Err(Error::InvalidCap);
+            }
+        }
+        storage::set_source_approved(&env, &source, approved);
+        storage::set_source_cap(&env, &source, cap);
+        Ok(())
+    }
+
+    /// View: whether `source` is approved.
+    pub fn is_source_approved(env: Env, source: Address) -> bool {
+        storage::is_source_approved(&env, &source)
+    }
+
+    /// View: optional aggregate cap for `source`.
+    pub fn get_source_cap(env: Env, source: Address) -> Option<i128> {
+        storage::get_source_cap(&env, &source)
+    }
+
+    /// View: `(daily_total, cumulative_total)` for `source` on `ledger_day`.
+    pub fn get_source_totals(env: Env, source: Address, ledger_day: u64) -> (i128, i128) {
+        (
+            storage::get_source_daily_total(&env, &source, ledger_day),
+            storage::get_source_cumulative_total(&env, &source),
+        )
     }
 
     /// Admin-only: route `amount` of treasury funds to `destination` for
