@@ -1,6 +1,6 @@
 //! Data types for the platform pause contract.
 
-use soroban_sdk::{contracttype, BytesN, Address, Vec};
+use soroban_sdk::{contracttype, Address, BytesN, Vec};
 
 /// Storage key enum for instance and persistent storage.
 #[contracttype]

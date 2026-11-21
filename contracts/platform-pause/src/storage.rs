@@ -80,7 +80,9 @@ pub fn get_invoice_paused(env: &Env, invoice_id: &BytesN<32>) -> bool {
 
 /// Set the maximum number of contracts that can be registered.
 pub fn set_max_registered_contracts(env: &Env, max: u32) {
-    env.storage().instance().set(&StorageKey::MaxRegisteredContracts, &max);
+    env.storage()
+        .instance()
+        .set(&StorageKey::MaxRegisteredContracts, &max);
     env.storage()
         .instance()
         .extend_ttl(TTL_THRESHOLD, MIN_TTL_EXTEND);
@@ -98,34 +100,36 @@ pub fn register_contract(env: &Env, contract: &Address) -> Result<(), ()> {
     if env.storage().persistent().has(&key) {
         return Err(());
     }
-    
+
     let mut contracts: Vec<Address> = env
         .storage()
         .instance()
         .get(&StorageKey::RegisteredContracts)
         .unwrap_or(Vec::new(env));
-    
+
     let max_contracts = env
         .storage()
         .instance()
         .get(&StorageKey::MaxRegisteredContracts)
         .unwrap_or(MAX_REGISTERED_CONTRACTS);
-    
+
     if contracts.len() >= max_contracts {
         return Err(());
     }
-    
+
     contracts.push_back(contract.clone());
-    env.storage().instance().set(&StorageKey::RegisteredContracts, &contracts);
+    env.storage()
+        .instance()
+        .set(&StorageKey::RegisteredContracts, &contracts);
     env.storage()
         .instance()
         .extend_ttl(TTL_THRESHOLD, MIN_TTL_EXTEND);
-    
+
     env.storage().persistent().set(&key, &true);
     env.storage()
         .persistent()
         .extend_ttl(&key, TTL_THRESHOLD, MIN_TTL_EXTEND);
-    
+
     Ok(())
 }
 
@@ -135,13 +139,13 @@ pub fn unregister_contract(env: &Env, contract: &Address) -> Result<(), ()> {
     if !env.storage().persistent().has(&key) {
         return Err(());
     }
-    
+
     let mut contracts: Vec<Address> = env
         .storage()
         .instance()
         .get(&StorageKey::RegisteredContracts)
         .unwrap_or(Vec::new(env));
-    
+
     // Remove the contract from the list
     let mut new_contracts = Vec::new(env);
     for i in 0..contracts.len() {
@@ -150,14 +154,16 @@ pub fn unregister_contract(env: &Env, contract: &Address) -> Result<(), ()> {
             new_contracts.push_back(c);
         }
     }
-    
-    env.storage().instance().set(&StorageKey::RegisteredContracts, &new_contracts);
+
+    env.storage()
+        .instance()
+        .set(&StorageKey::RegisteredContracts, &new_contracts);
     env.storage()
         .instance()
         .extend_ttl(TTL_THRESHOLD, MIN_TTL_EXTEND);
-    
+
     env.storage().persistent().remove(&key);
-    
+
     Ok(())
 }
 
@@ -171,7 +177,9 @@ pub fn get_registered_contracts(env: &Env) -> Vec<Address> {
 
 /// Set the maximum number of contracts that can be registered.
 pub fn set_max_registered_contracts(env: &Env, max: u32) {
-    env.storage().instance().set(&StorageKey::MaxRegisteredContracts, &max);
+    env.storage()
+        .instance()
+        .set(&StorageKey::MaxRegisteredContracts, &max);
     env.storage()
         .instance()
         .extend_ttl(TTL_THRESHOLD, MIN_TTL_EXTEND);

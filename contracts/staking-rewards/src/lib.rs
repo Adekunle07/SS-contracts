@@ -172,7 +172,7 @@ impl StakingRewards {
             .amount
             .checked_mul(invoice.bonus_bps as i128)
             .ok_or(Error::Overflow)?
-            .checked_mul(stake.unlock_at - stake.started_at)
+            .checked_mul(i128::from(stake.unlock_at - stake.started_at))
             .ok_or(Error::Overflow)?
             .checked_div(10_000 * YEAR as i128)
             .ok_or(Error::Overflow)?;

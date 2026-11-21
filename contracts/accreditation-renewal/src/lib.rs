@@ -27,15 +27,10 @@ impl AccreditationRenewalContract {
 
     pub fn set_accreditation_expiry(
         env: Env,
+        caller: Address,
         wallet: Address,
         expiry_timestamp: u64,
     ) -> Result<(), Error> {
-        let is_admin = env
-            .storage()
-            .instance()
-            .get::<DataKey, Address>(&DataKey::Admin)
-            .map(|a| a == wallet)
-            .unwrap_or(false);
         let admin_addr: Address = env
             .storage()
             .instance()
@@ -47,12 +42,10 @@ impl AccreditationRenewalContract {
             .get(&DataKey::Operator)
             .ok_or(Error::NotInitialized)?;
 
-        if !is_admin {
-            // Require auth from either admin or operator
-            if admin_addr.require_auth().is_err() && operator_addr.require_auth().is_err() {
-                return Err(Error::Unauthorized);
-            }
+        if caller != admin_addr && caller != operator_addr {
+            return Err(Error::Unauthorized);
         }
+        caller.require_auth();
 
         if expiry_timestamp <= env.ledger().timestamp() {
             return Err(Error::InvalidExpiry);

@@ -1,7 +1,7 @@
 #![allow(deprecated)]
 //! Events emitted by the platform pause contract.
 
-use soroban_sdk::{Address, BytesN, Env, Symbol, String};
+use soroban_sdk::{Address, BytesN, Env, String, Symbol};
 
 /// Emitted when the contract is initialized.
 pub fn initialized(env: &Env, admin: &Address) {
@@ -57,7 +57,8 @@ pub fn contract_unregistered(env: &Env, contract: &Address) {
 /// Topics: (FreezePropagationRequested,); Data: (timestamp, actor, contract_count).
 pub fn freeze_propagation_requested(env: &Env, actor: &Address, count: u32) {
     let topics = (Symbol::new(env, "FreezePropagationRequested"),);
-    env.events().publish(topics, (env.ledger().timestamp(), actor.clone(), count));
+    env.events()
+        .publish(topics, (env.ledger().timestamp(), actor.clone(), count));
 }
 
 /// Emitted when freeze propagation result for a contract is recorded.

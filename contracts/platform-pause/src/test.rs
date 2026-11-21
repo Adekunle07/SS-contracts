@@ -424,11 +424,11 @@ fn test_freeze_propagation_on_pause() {
 
     let results = client.pause_platform(&admin);
     assert_eq!(results.len(), 2);
-    
+
     // Both should have attempted propagation
     let status1 = results.get(0).unwrap();
     let status2 = results.get(1).unwrap();
-    
+
     // Since the target contracts don't have set_paused, they will fail
     // but we verify the structure is correct
     assert_eq!(status1.contract, contract1);
@@ -446,10 +446,10 @@ fn test_freeze_propagation_on_resume() {
     client.pause_platform(&admin);
     client.resume_platform(&admin);
     advance_time(&env, RESUME_TIMELOCK_SECONDS);
-    
+
     let results = client.resume_platform(&admin);
     assert_eq!(results.len(), 1);
-    
+
     let status = results.get(0).unwrap();
     assert_eq!(status.contract, contract);
 }
@@ -466,7 +466,7 @@ fn test_contract_registered_event_emitted() {
     let (topics, data) = last_event(&env);
     let name_sym: Symbol = topics.get(0).unwrap().try_into_val(&env).unwrap();
     assert_eq!(name_sym, Symbol::new(&env, "ContractRegistered"));
-    
+
     let emitted_name: String = data.try_into_val(&env).unwrap();
     assert_eq!(emitted_name, name);
 }
@@ -505,7 +505,8 @@ fn test_freeze_propagation_requested_event_emitted() {
         let topics = Vec::<Val>::try_from_val(
             env,
             &soroban_sdk::xdr::ScVal::Vec(Some(v0.topics.clone().into())),
-        ).unwrap();
+        )
+        .unwrap();
         let topic: Symbol = topics.get(0).unwrap().try_into_val(&env).unwrap();
         if topic == Symbol::new(&env, "FreezePropagationRequested") {
             found = true;
@@ -538,7 +539,8 @@ fn test_freeze_propagated_event_emitted() {
         let topics = Vec::<Val>::try_from_val(
             env,
             &soroban_sdk::xdr::ScVal::Vec(Some(v0.topics.clone().into())),
-        ).unwrap();
+        )
+        .unwrap();
         let topic: Symbol = topics.get(0).unwrap().try_into_val(&env).unwrap();
         if topic == Symbol::new(&env, "FreezePropagated") {
             found = true;

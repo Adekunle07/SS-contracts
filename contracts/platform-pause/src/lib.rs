@@ -22,7 +22,9 @@ mod types;
 use soroban_sdk::{contract, contractimpl, Address, BytesN, Env, String, Vec};
 
 use errors::Error;
-use storage::{get_registered_contracts, register_contract, unregister_contract, MAX_REGISTERED_CONTRACTS};
+use storage::{
+    get_registered_contracts, register_contract, unregister_contract, MAX_REGISTERED_CONTRACTS,
+};
 use types::{FreezeStatus, StorageKey};
 
 /// Minimum delay between queuing a resume and it taking effect.
@@ -75,7 +77,7 @@ impl PlatformPause {
         // Propagate freeze to all registered contracts
         let contracts = get_registered_contracts(&env);
         let mut results = Vec::new(&env);
-        
+
         for i in 0..contracts.len() {
             let contract = contracts.get(i).unwrap();
             let status = Self::propagate_freeze(&env, &contract, true);
@@ -83,7 +85,7 @@ impl PlatformPause {
         }
 
         events::freeze_propagation_requested(&env, &admin, contracts.len());
-        
+
         // Emit individual freeze propagation events
         for i in 0..results.len() {
             let status = results.get(i).unwrap();
@@ -130,7 +132,7 @@ impl PlatformPause {
                 // Propagate unfreeze to all registered contracts
                 let contracts = get_registered_contracts(&env);
                 let mut results = Vec::new(&env);
-                
+
                 for i in 0..contracts.len() {
                     let contract = contracts.get(i).unwrap();
                     let status = Self::propagate_freeze(&env, &contract, false);
@@ -138,7 +140,7 @@ impl PlatformPause {
                 }
 
                 events::freeze_propagation_requested(&env, &admin, contracts.len());
-                
+
                 // Emit individual freeze propagation events
                 for i in 0..results.len() {
                     let status = results.get(i).unwrap();
@@ -230,11 +232,7 @@ impl PlatformPause {
     }
 
     /// Admin-only: unregister a contract from freeze propagation.
-    pub fn unregister_contract(
-        env: Env,
-        admin: Address,
-        contract: Address,
-    ) -> Result<(), Error> {
+    pub fn unregister_contract(env: Env, admin: Address, contract: Address) -> Result<(), Error> {
         let stored_admin = storage::get_admin(&env).ok_or(Error::NotInit)?;
         if admin != stored_admin {
             return Err(Error::Unauthorized);
@@ -263,7 +261,7 @@ impl PlatformPause {
     /// This is an internal function that handles the cross-contract call.
     fn propagate_freeze(env: &Env, contract: &Address, paused: bool) -> FreezeStatus {
         // Try to call the contract's set_paused function
-        // If the contract doesn't have this function or the call fails, 
+        // If the contract doesn't have this function or the call fails,
         // we record the failure but don't panic
         let result = env.try_invoke_contract::<()>(
             contract,
