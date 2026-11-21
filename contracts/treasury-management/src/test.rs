@@ -277,3 +277,35 @@ fn test_funds_allocated_event_emitted() {
     assert_eq!(amount, 250);
     assert_eq!(purpose, String::from_str(&env, "operations"));
 }
+
+#[test]
+fn test_allocation_cooldown_enforced_and_admin_only() {
+    use soroban_sdk::testutils::Ledger as _;
+
+    let env = Env::default();
+    let (admin, client) = setup(&env);
+    let source = Address::generate(&env);
+    let dest = Address::generate(&env);
+    let stranger = Address::generate(&env);
+
+    client.receive_fee(&source, &1_000);
+    assert_eq!(
+        client.try_set_allocation_cooldown(&stranger, &10),
+        Err(Ok(Error::Unauthorized))
+    );
+
+    client.set_allocation_cooldown(&admin, &10);
+    client.allocate(&admin, &dest, &100, &String::from_str(&env, "first"));
+    assert_eq!(client.get_remaining_cooldown(), 10);
+
+    // Second allocation inside cooldown fails
+    assert_eq!(
+        client.try_allocate(&admin, &dest, &100, &String::from_str(&env, "too_soon")),
+        Err(Ok(Error::AllocationCooldownActive))
+    );
+
+    // Advance exactly 10 ledgers -> allowed
+    env.ledger().set_sequence_number(env.ledger().sequence() + 10);
+    assert_eq!(client.get_remaining_cooldown(), 0);
+    client.allocate(&admin, &dest, &100, &String::from_str(&env, "after"));
+}

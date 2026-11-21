@@ -25,9 +25,11 @@ use types::SettlementProposal;
 
 // EscrowStatus is re-exported publicly; Config, EscrowData, and InvoiceData are crate-private.
 pub use types::EscrowStatus;
+pub use types::FeeSnapshot;
 pub use types::FundingStatus;
 pub use types::InstallmentMilestone;
 pub use types::InvoiceCategory;
+pub use types::SettlementProposalStatus;
 use types::{
     CategoryFeeSchedule, Config, DisputeData, EscrowData, FundingInvoice, InstallmentInput,
     InvestmentRecord, InvoiceData, InvoiceStatus,
@@ -1952,6 +1954,9 @@ impl InvoiceEscrow {
 
         storage::set_invoice_record(&env, &invoice_id, &data);
         storage::set_investor_count(&env, &invoice_id, 0);
+        if let Some(cfg) = storage::get_config(&env) {
+            Self::record_fee_snapshot(&env, &invoice_id, cfg.fee_bps, cfg.fee_bps, 0)?;
+        }
         events::invoice_registered(
             &env,
             &invoice_id,
@@ -2614,6 +2619,15 @@ impl InvoiceEscrow {
                 repayment_amount,
             },
         );
+        let ttl: u32 = env
+            .storage()
+            .instance()
+            .get(&types::StorageKey::SettleTtl)
+            .unwrap_or(17_280u32);
+        let expires_at = env.ledger().sequence().saturating_add(ttl);
+        env.storage()
+            .persistent()
+            .set(&types::StorageKey::SettleExp(invoice_id.clone()), &expires_at);
         events::settlement_proposed(env, invoice_id, admin, repayment_amount);
         Ok(())
     }
@@ -2632,11 +2646,23 @@ impl InvoiceEscrow {
         }
         let proposal = storage::get_settlement_proposal(&env, &invoice_id)
             .ok_or(Error::SettlementNotProposed)?;
+        if let Some(expires_at) = env
+            .storage()
+            .persistent()
+            .get::<types::StorageKey, u32>(&types::StorageKey::SettleExp(invoice_id.clone()))
+        {
+            if env.ledger().sequence() > expires_at {
+                return Err(Error::SettlementProposalExpired);
+            }
+        }
         if proposal.proposer == admin {
             return Err(Error::SameAdminApproval);
         }
         Self::execute_settlement(&env, &invoice_id, proposal.repayment_amount)?;
         storage::remove_settlement_proposal(&env, &invoice_id);
+        env.storage()
+            .persistent()
+            .remove(&types::StorageKey::SettleExp(invoice_id.clone()));
         events::settlement_approved(&env, &invoice_id, &admin, proposal.repayment_amount);
         Ok(())
     }
@@ -2899,6 +2925,164 @@ impl InvoiceEscrow {
         events::escrow_cleaned_up(&env, inv_id);
         Ok(removed)
     }
+
+    // ── Issue #752: Settlement proposal deadline & cancellation ──────────────
+
+    pub fn set_settlement_proposal_ttl(
+        env: Env,
+        admin: Address,
+        ttl_ledgers: u32,
+    ) -> Result<(), Error> {
+        let cfg = storage::get_config(&env).ok_or(Error::NotInit)?;
+        if admin != cfg.admin {
+            return Err(Error::Unauthorized);
+        }
+        admin.require_auth();
+        if ttl_ledgers == 0 {
+            return Err(Error::InvalidDuration);
+        }
+        env.storage()
+            .instance()
+            .set(&types::StorageKey::SettleTtl, &ttl_ledgers);
+        Ok(())
+    }
+
+    pub fn cancel_settlement_proposal(
+        env: Env,
+        caller: Address,
+        invoice_id: BytesN<32>,
+    ) -> Result<(), Error> {
+        caller.require_auth();
+        let proposal = storage::get_settlement_proposal(&env, &invoice_id)
+            .ok_or(Error::SettlementNotProposed)?;
+        let is_admin = storage::get_config(&env)
+            .map(|c| c.admin == caller)
+            .unwrap_or(false);
+        if caller != proposal.proposer && !is_admin {
+            return Err(Error::Unauthorized);
+        }
+        storage::remove_settlement_proposal(&env, &invoice_id);
+        env.storage()
+            .persistent()
+            .remove(&types::StorageKey::SettleExp(invoice_id.clone()));
+        events::proposal_cancelled(&env, &invoice_id, &caller);
+        Ok(())
+    }
+
+    pub fn get_settlement_proposal_status(
+        env: Env,
+        invoice_id: BytesN<32>,
+    ) -> Option<SettlementProposalStatus> {
+        let proposal = storage::get_settlement_proposal(&env, &invoice_id)?;
+        let expires_at = env
+            .storage()
+            .persistent()
+            .get(&types::StorageKey::SettleExp(invoice_id))
+            .unwrap_or(u32::MAX);
+        let now = env.ledger().sequence();
+        Some(SettlementProposalStatus {
+            proposer: proposal.proposer,
+            repayment_amount: proposal.repayment_amount,
+            expires_at_ledger: expires_at,
+            remaining_ttl: expires_at.saturating_sub(now),
+            expired: now > expires_at,
+        })
+    }
+
+    // ── Issue #754: Formal protocol fee schedule snapshot per invoice ────────
+
+    fn record_fee_snapshot(
+        env: &Env,
+        invoice_id: &BytesN<32>,
+        category_fee_bps: u32,
+        platform_fee_bps: u32,
+        distributor_fee_bps: u32,
+    ) -> Result<FeeSnapshot, Error> {
+        if category_fee_bps > MAX_BPS
+            || platform_fee_bps > MAX_BPS
+            || distributor_fee_bps > MAX_BPS
+        {
+            return Err(Error::InvalidFeeBps);
+        }
+        let effective_fee_bps = category_fee_bps;
+        let snap = FeeSnapshot {
+            category_fee_bps,
+            platform_fee_bps,
+            distributor_fee_bps,
+            effective_fee_bps,
+        };
+        let key = types::StorageKey::FeeSnap(invoice_id.clone());
+        let existed = env.storage().persistent().has(&key);
+        env.storage().persistent().set(&key, &snap);
+        if !existed {
+            let cnt: u32 = env
+                .storage()
+                .instance()
+                .get(&types::StorageKey::FeeSnapCnt)
+                .unwrap_or(0);
+            env.storage()
+                .instance()
+                .set(&types::StorageKey::FeeSnapCnt, &(cnt + 1));
+        }
+        events::fee_snapshot_created(env, invoice_id, effective_fee_bps);
+        Ok(snap)
+    }
+
+    pub fn snapshot_invoice_fees(
+        env: Env,
+        admin: Address,
+        invoice_id: BytesN<32>,
+        category_fee_bps: u32,
+        platform_fee_bps: u32,
+        distributor_fee_bps: u32,
+    ) -> Result<FeeSnapshot, Error> {
+        let cfg = storage::get_config(&env).ok_or(Error::NotInit)?;
+        if admin != cfg.admin {
+            return Err(Error::Unauthorized);
+        }
+        admin.require_auth();
+        Self::record_fee_snapshot(
+            &env,
+            &invoice_id,
+            category_fee_bps,
+            platform_fee_bps,
+            distributor_fee_bps,
+        )
+    }
+
+    pub fn get_invoice_fee_snapshot(env: Env, invoice_id: BytesN<32>) -> Option<FeeSnapshot> {
+        env.storage()
+            .persistent()
+            .get(&types::StorageKey::FeeSnap(invoice_id))
+    }
+
+    pub fn fee_snapshot_count(env: Env) -> u32 {
+        env.storage()
+            .instance()
+            .get(&types::StorageKey::FeeSnapCnt)
+            .unwrap_or(0)
+    }
+
+    pub fn preview_invoice_fee(
+        env: Env,
+        invoice_id: BytesN<32>,
+        amount: i128,
+    ) -> Result<i128, Error> {
+        if amount < 0 {
+            return Err(Error::InvalidAmount);
+        }
+        let bps = if let Some(snap) = Self::get_invoice_fee_snapshot(env.clone(), invoice_id) {
+            snap.effective_fee_bps
+        } else {
+            // Legacy invoice fallback to live config
+            storage::get_config(&env).ok_or(Error::NotInit)?.fee_bps
+        };
+        amount
+            .checked_mul(i128::from(bps))
+            .ok_or(Error::Overflow)?
+            .checked_div(i128::from(MAX_BPS))
+            .ok_or(Error::Overflow)
+    }
 }
 
 #[cfg(test)]
@@ -2925,3 +3109,33 @@ mod test_batch_features;
 pub use earnest_deposit::{EarnestDeposit, EarnestDepositConfig, EarnestError, EarnestStatus};
 pub use insurance_pool::{InsuranceConfig, InsurancePool, InsuranceStorageKey};
 pub use oracle_adapter::{CurrencyOracleConfig, OracleError, OraclePriceAdapter, PriceData};
+
+#[cfg(test)]
+mod settlement_and_fee_test {
+    use super::*;
+    use soroban_sdk::testutils::Address as _;
+    use soroban_sdk::{BytesN, Env};
+
+    #[test]
+    fn test_fee_snapshot_and_legacy_fallback() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let cid = env.register(InvoiceEscrow, ());
+        let client = InvoiceEscrowClient::new(&env, &cid);
+        let admin = Address::generate(&env);
+        client.initialize(&admin, &250u32);
+
+        let inv = BytesN::from_array(&env, &[5u8; 32]);
+        let legacy = BytesN::from_array(&env, &[6u8; 32]);
+
+        // Legacy fallback uses live config (250 bps)
+        assert_eq!(client.preview_invoice_fee(&legacy, &10_000i128), 250);
+
+        // Snapshot freezes fee at 300 bps even when global config changes to 500
+        client.snapshot_invoice_fees(&admin, &inv, &300u32, &300u32, &50u32);
+        assert_eq!(client.fee_snapshot_count(), 1);
+        client.update_platform_fee_bps(&500u32);
+        assert_eq!(client.preview_invoice_fee(&inv, &10_000i128), 300);
+        assert_eq!(client.preview_invoice_fee(&legacy, &10_000i128), 500);
+    }
+}

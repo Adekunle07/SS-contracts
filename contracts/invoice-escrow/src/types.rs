@@ -67,6 +67,33 @@ pub enum StorageKey {
     RepaymentReserve(soroban_sdk::Address),
     /// Instance: maximum FX quote age in seconds for a supported currency.
     CurrencyMaxAge(soroban_sdk::Symbol),
+    /// Persistent: ledger expiry for a pending settlement proposal.
+    SettleExp(soroban_sdk::BytesN<32>),
+    /// Instance: default TTL ledgers for pending settlement proposals.
+    SettleTtl,
+    /// Persistent: formal fee snapshot per invoice.
+    FeeSnap(soroban_sdk::BytesN<32>),
+    /// Instance: total number of fee snapshots recorded.
+    FeeSnapCnt,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct SettlementProposalStatus {
+    pub proposer: soroban_sdk::Address,
+    pub repayment_amount: i128,
+    pub expires_at_ledger: u32,
+    pub remaining_ttl: u32,
+    pub expired: bool,
+}
+
+#[contracttype]
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct FeeSnapshot {
+    pub category_fee_bps: u32,
+    pub platform_fee_bps: u32,
+    pub distributor_fee_bps: u32,
+    pub effective_fee_bps: u32,
 }
 
 /// One multi-currency investment, normalised to the base currency at the FX

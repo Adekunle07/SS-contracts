@@ -495,6 +495,24 @@ pub fn currency_invested(
     );
 }
 
+pub fn proposal_cancelled(env: &Env, invoice_id: &BytesN<32>, caller: &Address) {
+    env.events().publish(
+        (Symbol::new(env, "proposal_cancelled"), invoice_id.clone()),
+        caller.clone(),
+    );
+}
+
+pub fn fee_snapshot_created(
+    env: &Env,
+    invoice_id: &BytesN<32>,
+    effective_fee_bps: u32,
+) {
+    env.events().publish(
+        (Symbol::new(env, "fee_snapshot_created"), invoice_id.clone()),
+        effective_fee_bps,
+    );
+}
+
 /// Publish a change to a currency's maximum FX quote age.
 pub fn currency_max_age_set(env: &Env, currency: &Symbol, max_age_secs: u64) {
     env.events().publish(

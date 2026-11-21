@@ -22,3 +22,14 @@ pub fn funds_allocated(env: &Env, destination: &Address, amount: i128, purpose: 
     let topics = (Symbol::new(env, "FundsAllocated"), destination.clone());
     env.events().publish(topics, (amount, purpose.clone()));
 }
+
+pub fn allocation_cooldown_started(
+    env: &Env,
+    ledger: u32,
+    cooldown_ledgers: u32,
+    unlock_ledger: u32,
+) {
+    let topics = (Symbol::new(env, "allocation_cooldown_started"),);
+    env.events()
+        .publish(topics, (ledger, cooldown_ledgers, unlock_ledger));
+}

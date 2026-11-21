@@ -23,4 +23,6 @@ pub enum Error {
     InvalidPurpose = 7,
     /// Arithmetic overflow while updating a balance or count.
     Overflow = 8,
+    /// Treasury allocation cooldown has not elapsed yet.
+    AllocationCooldownActive = 9,
 }

@@ -23,6 +23,10 @@ pub enum StorageKey {
     AllocationCount,
     /// Persistent: one allocation record by its index.
     Allocation(u32),
+    /// Instance: configured cooldown in ledgers between allocations.
+    AllocCool,
+    /// Instance: ledger sequence of the most recent allocation.
+    LastAllocL,
 }
 
 /// One historical allocation of treasury funds to a destination.
