@@ -161,7 +161,8 @@ impl AuthTestEnv {
     }
 
     pub fn fund_escrow(&self) {
-        self.escrow_client.fund_escrow_legacy(&self.invoice_id, &self.buyer, &1000);
+        self.escrow_client
+            .fund_escrow_legacy(&self.invoice_id, &self.buyer, &1000);
     }
 
     pub fn advance_time_past_due(&self) {
@@ -179,25 +180,38 @@ pub fn run_auth_matrix(
 ) {
     for case in test_cases {
         let result = call_fn(test_env, case.role);
-        
+
         if case.should_succeed {
             assert!(
                 result.is_ok(),
                 "Method {} should succeed for role {:?}, got error: {:?}",
-                case.method, case.role, result
+                case.method,
+                case.role,
+                result
             );
         } else {
             assert!(
                 result.is_err(),
                 "Method {} should fail for role {:?}, but succeeded",
-                case.method, case.role
+                case.method,
+                case.role
             );
-            
+
             if let Some(expected_error) = case.expected_error {
                 match result {
-                    Err(Ok(e)) => assert_eq!(e, expected_error, "Wrong error for {} with role {:?}", case.method, case.role),
-                    Err(Err(e)) => panic!("Host error for {} with role {:?}: {:?}", case.method, case.role, e),
-                    Ok(_) => panic!("Expected error for {} with role {:?}", case.method, case.role),
+                    Err(Ok(e)) => assert_eq!(
+                        e, expected_error,
+                        "Wrong error for {} with role {:?}",
+                        case.method, case.role
+                    ),
+                    Err(Err(e)) => panic!(
+                        "Host error for {} with role {:?}: {:?}",
+                        case.method, case.role, e
+                    ),
+                    Ok(_) => panic!(
+                        "Expected error for {} with role {:?}",
+                        case.method, case.role
+                    ),
                 }
             }
         }
@@ -217,11 +231,7 @@ pub fn get_address_for_role(env: &AuthTestEnv, role: AuthRole) -> Address {
 }
 
 /// Test helper to call a method with a specific role (without mock_all_auths)
-pub fn call_with_role<F, R>(
-    env: &Env,
-    role_address: &Address,
-    call_fn: F,
-) -> Result<R, Error>
+pub fn call_with_role<F, R>(env: &Env, role_address: &Address, call_fn: F) -> Result<R, Error>
 where
     F: FnOnce() -> Result<R, Error>,
 {
@@ -290,7 +300,11 @@ fn auth_matrix_create_escrow_legacy() {
         &None,
         &None,
     );
-    assert_eq!(result, Err(Ok(Error::InvalidAddress)), "Zero address should be rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAddress)),
+        "Zero address should be rejected"
+    );
 }
 
 /// Authorization matrix for fund_escrow_legacy
@@ -304,15 +318,27 @@ fn auth_matrix_fund_escrow_legacy() {
     // Zero address should fail
     let zero = zero_address(&test_env.env);
     let result = client.try_fund_escrow_legacy(&test_env.invoice_id, &zero, &100);
-    assert_eq!(result, Err(Ok(Error::InvalidAddress)), "Zero address should be rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAddress)),
+        "Zero address should be rejected"
+    );
 
     // Wrong amount should fail
     let result = client.try_fund_escrow_legacy(&test_env.invoice_id, &test_env.buyer, &0);
-    assert_eq!(result, Err(Ok(Error::ZeroAmount)), "Zero amount should be rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::ZeroAmount)),
+        "Zero amount should be rejected"
+    );
 
     // Negative amount should fail
     let result = client.try_fund_escrow_legacy(&test_env.invoice_id, &test_env.buyer, &-100);
-    assert_eq!(result, Err(Ok(Error::InvalidAmount)), "Negative amount should be rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAmount)),
+        "Negative amount should be rejected"
+    );
 }
 
 /// Authorization matrix for record_payment
@@ -357,27 +383,51 @@ fn auth_matrix_record_payment() {
     // Zero address should fail
     let zero = zero_address(env);
     let result = client.try_record_payment(&invoice_id2, &zero, &1000);
-    assert_eq!(result, Err(Ok(Error::InvalidAddress)), "Zero address should be rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAddress)),
+        "Zero address should be rejected"
+    );
 
     // Wrong payer (seller) should fail
     let result = client.try_record_payment(&invoice_id2, &test_env.seller, &1000);
-    assert_eq!(result, Err(Ok(Error::InvalidPayer)), "Seller cannot be payer");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidPayer)),
+        "Seller cannot be payer"
+    );
 
     // Wrong payer (buyer) should fail
     let result = client.try_record_payment(&invoice_id2, &test_env.buyer, &1000);
-    assert_eq!(result, Err(Ok(Error::InvalidPayer)), "Buyer cannot be payer");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidPayer)),
+        "Buyer cannot be payer"
+    );
 
     // Third party should fail
     let result = client.try_record_payment(&invoice_id2, &test_env.third_party, &1000);
-    assert_eq!(result, Err(Ok(Error::InvalidPayer)), "Third party cannot be payer");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidPayer)),
+        "Third party cannot be payer"
+    );
 
     // Negative amount should fail
     let result = client.try_record_payment(&invoice_id2, &test_env.debtor, &-100);
-    assert_eq!(result, Err(Ok(Error::InvalidAmount)), "Negative amount should be rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAmount)),
+        "Negative amount should be rejected"
+    );
 
     // Zero amount should fail
     let result = client.try_record_payment(&invoice_id2, &test_env.debtor, &0);
-    assert_eq!(result, Err(Ok(Error::InvalidAmount)), "Zero amount should be rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAmount)),
+        "Zero amount should be rejected"
+    );
 }
 
 /// Authorization matrix for refund_escrow
@@ -391,7 +441,10 @@ fn auth_matrix_refund_escrow() {
 
     // Anyone can call refund_escrow (no auth required)
     let result = client.try_refund_escrow(&test_env.invoice_id);
-    assert!(result.is_ok(), "Anyone should be able to call refund_escrow");
+    assert!(
+        result.is_ok(),
+        "Anyone should be able to call refund_escrow"
+    );
 
     // Zero address as caller should still work (no auth)
     let zero = zero_address(&test_env.env);
@@ -452,7 +505,11 @@ fn auth_matrix_cancel_escrow() {
     // Zero address should fail
     let zero = zero_address(env);
     let result = client.try_cancel_escrow(&invoice_id3, &zero);
-    assert_eq!(result, Err(Ok(Error::InvalidAddress)), "Zero address should be rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAddress)),
+        "Zero address should be rejected"
+    );
 
     // Debtor cannot cancel
     let result = client.try_cancel_escrow(&invoice_id3, &test_env.debtor);
@@ -464,7 +521,11 @@ fn auth_matrix_cancel_escrow() {
 
     // Third party cannot cancel
     let result = client.try_cancel_escrow(&invoice_id3, &test_env.third_party);
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Third party cannot cancel");
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Third party cannot cancel"
+    );
 }
 
 /// Authorization matrix for admin-only functions
@@ -480,7 +541,11 @@ fn auth_matrix_admin_functions() {
     assert!(result.is_ok(), "Admin should be able to set distributor");
 
     let result = client.try_set_payment_distributor(&test_env.seller, &distributor_id);
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Seller cannot set distributor");
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Seller cannot set distributor"
+    );
 
     // set_paused - admin only
     let result = client.try_set_paused(&test_env.admin, &true);
@@ -494,69 +559,138 @@ fn auth_matrix_admin_functions() {
     assert!(result.is_ok(), "Admin should be able to set grace period");
 
     let result = client.try_set_grace_period(&test_env.admin, &test_env.seller, &100);
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Seller cannot set grace period");
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Seller cannot set grace period"
+    );
 
     // set_category_fee - admin only
-    let result = client.try_set_category_fee(&test_env.admin, &test_env.admin, &crate::types::InvoiceCategory::Standard, &100);
+    let result = client.try_set_category_fee(
+        &test_env.admin,
+        &test_env.admin,
+        &crate::types::InvoiceCategory::Standard,
+        &100,
+    );
     assert!(result.is_ok(), "Admin should be able to set category fee");
 
-    let result = client.try_set_category_fee(&test_env.admin, &test_env.seller, &crate::types::InvoiceCategory::Standard, &100);
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Seller cannot set category fee");
+    let result = client.try_set_category_fee(
+        &test_env.admin,
+        &test_env.seller,
+        &crate::types::InvoiceCategory::Standard,
+        &100,
+    );
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Seller cannot set category fee"
+    );
 
     // set_settlement_fee - admin only
     let result = client.try_set_settlement_fee(&test_env.admin, &test_env.admin, &100);
     assert!(result.is_ok(), "Admin should be able to set settlement fee");
 
     let result = client.try_set_settlement_fee(&test_env.admin, &test_env.seller, &100);
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Seller cannot set settlement fee");
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Seller cannot set settlement fee"
+    );
 
     // set_min_investment - admin only
     let result = client.try_set_min_investment(&test_env.admin, &test_env.admin, &100);
     assert!(result.is_ok(), "Admin should be able to set min investment");
 
     let result = client.try_set_min_investment(&test_env.admin, &test_env.seller, &100);
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Seller cannot set min investment");
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Seller cannot set min investment"
+    );
 
     // set_whitelist_enabled - admin only
     let result = client.try_set_whitelist_enabled(&test_env.admin, &test_env.admin, &true);
     assert!(result.is_ok(), "Admin should be able to set whitelist");
 
     let result = client.try_set_whitelist_enabled(&test_env.admin, &test_env.seller, &true);
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Seller cannot set whitelist");
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Seller cannot set whitelist"
+    );
 
     // set_accreditation_callback - admin only
     let callback_id = env.register_contract(None, MockInvoiceToken);
-    let result = client.try_set_accreditation_callback(&test_env.admin, &test_env.admin, &Some(callback_id));
+    let result =
+        client.try_set_accreditation_callback(&test_env.admin, &test_env.admin, &Some(callback_id));
     assert!(result.is_ok(), "Admin should be able to set callback");
 
-    let result = client.try_set_accreditation_callback(&test_env.admin, &test_env.seller, &Some(callback_id));
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Seller cannot set callback");
+    let result = client.try_set_accreditation_callback(
+        &test_env.admin,
+        &test_env.seller,
+        &Some(callback_id),
+    );
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Seller cannot set callback"
+    );
 
     // set_penalty_interest_bps - admin only
     let result = client.try_set_penalty_interest_bps(&test_env.admin, &test_env.admin, &100);
-    assert!(result.is_ok(), "Admin should be able to set penalty interest");
+    assert!(
+        result.is_ok(),
+        "Admin should be able to set penalty interest"
+    );
 
     let result = client.try_set_penalty_interest_bps(&test_env.admin, &test_env.seller, &100);
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Seller cannot set penalty interest");
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Seller cannot set penalty interest"
+    );
 
     // set_buyer_whitelisted - admin only
-    let result = client.try_set_buyer_whitelisted(&test_env.admin, &test_env.admin, &test_env.buyer, &true);
+    let result =
+        client.try_set_buyer_whitelisted(&test_env.admin, &test_env.admin, &test_env.buyer, &true);
     assert!(result.is_ok(), "Admin should be able to whitelist buyer");
 
-    let result = client.try_set_buyer_whitelisted(&test_env.admin, &test_env.seller, &test_env.buyer, &true);
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Seller cannot whitelist buyer");
+    let result =
+        client.try_set_buyer_whitelisted(&test_env.admin, &test_env.seller, &test_env.buyer, &true);
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Seller cannot whitelist buyer"
+    );
 
     // Zero address checks for admin functions
     let zero = zero_address(env);
-    
+
     let result = client.try_set_payment_distributor(&test_env.admin, &zero);
-    assert_eq!(result, Err(Ok(Error::InvalidAddress)), "Zero address distributor rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAddress)),
+        "Zero address distributor rejected"
+    );
 
     let result = client.try_set_grace_period(&test_env.admin, &zero, &100);
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Zero address admin rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Zero address admin rejected"
+    );
 
-    let result = client.try_set_category_fee(&test_env.admin, &zero, &crate::types::InvoiceCategory::Standard, &100);
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Zero address admin rejected");
+    let result = client.try_set_category_fee(
+        &test_env.admin,
+        &zero,
+        &crate::types::InvoiceCategory::Standard,
+        &100,
+    );
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Zero address admin rejected"
+    );
 }
 
 /// Authorization matrix for set_early_settlement (seller only)
@@ -569,8 +703,12 @@ fn auth_matrix_set_early_settlement() {
     test_env.fund_escrow();
 
     // Seller should succeed
-    let result = client.try_set_early_settlement(&test_env.invoice_id, &test_env.seller, &100, &2_000_000);
-    assert!(result.is_ok(), "Seller should be able to set early settlement");
+    let result =
+        client.try_set_early_settlement(&test_env.invoice_id, &test_env.seller, &100, &2_000_000);
+    assert!(
+        result.is_ok(),
+        "Seller should be able to set early settlement"
+    );
 
     // Create another escrow
     let invoice_id2 = Symbol::new(env, "INV_AUTH7");
@@ -601,19 +739,35 @@ fn auth_matrix_set_early_settlement() {
     // Zero address should fail
     let zero = zero_address(env);
     let result = client.try_set_early_settlement(&invoice_id2, &zero, &100, &2_000_000);
-    assert_eq!(result, Err(Ok(Error::InvalidAddress)), "Zero address should be rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAddress)),
+        "Zero address should be rejected"
+    );
 
     // Debtor cannot set early settlement
     let result = client.try_set_early_settlement(&invoice_id2, &test_env.debtor, &100, &2_000_000);
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Debtor cannot set early settlement");
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Debtor cannot set early settlement"
+    );
 
     // Buyer cannot set early settlement
     let result = client.try_set_early_settlement(&invoice_id2, &test_env.buyer, &100, &2_000_000);
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Buyer cannot set early settlement");
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Buyer cannot set early settlement"
+    );
 
     // Admin cannot set early settlement (not seller)
     let result = client.try_set_early_settlement(&invoice_id2, &test_env.admin, &100, &2_000_000);
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Admin cannot set early settlement");
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Admin cannot set early settlement"
+    );
 }
 
 /// Authorization matrix for set_installment_schedule (seller only)
@@ -649,13 +803,22 @@ fn auth_matrix_set_installment_schedule() {
 
     let schedule = soroban_sdk::vec![
         env,
-        crate::types::InstallmentInput { due_ts: 500_000, amount: 500 },
-        crate::types::InstallmentInput { due_ts: 800_000, amount: 500 },
+        crate::types::InstallmentInput {
+            due_ts: 500_000,
+            amount: 500
+        },
+        crate::types::InstallmentInput {
+            due_ts: 800_000,
+            amount: 500
+        },
     ];
 
     // Seller should succeed
     let result = client.try_set_installment_schedule(&invoice_id2, &test_env.seller, &schedule);
-    assert!(result.is_ok(), "Seller should be able to set installment schedule");
+    assert!(
+        result.is_ok(),
+        "Seller should be able to set installment schedule"
+    );
 
     // Create another for negative tests
     let invoice_id3 = Symbol::new(env, "INV_AUTH9");
@@ -676,19 +839,35 @@ fn auth_matrix_set_installment_schedule() {
     // Zero address should fail
     let zero = zero_address(env);
     let result = client.try_set_installment_schedule(&invoice_id3, &zero, &schedule);
-    assert_eq!(result, Err(Ok(Error::InvalidAddress)), "Zero address should be rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAddress)),
+        "Zero address should be rejected"
+    );
 
     // Debtor cannot set schedule
     let result = client.try_set_installment_schedule(&invoice_id3, &test_env.debtor, &schedule);
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Debtor cannot set schedule");
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Debtor cannot set schedule"
+    );
 
     // Buyer cannot set schedule
     let result = client.try_set_installment_schedule(&invoice_id3, &test_env.buyer, &schedule);
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Buyer cannot set schedule");
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Buyer cannot set schedule"
+    );
 
     // Admin cannot set schedule
     let result = client.try_set_installment_schedule(&invoice_id3, &test_env.admin, &schedule);
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Admin cannot set schedule");
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Admin cannot set schedule"
+    );
 }
 
 /// Test that rejected calls leave state unchanged
@@ -715,16 +894,28 @@ fn auth_rejected_calls_leave_state_unchanged() {
     let funder_amt_after = capture_funder_amount(env, &test_env.invoice_id, &test_env.buyer);
 
     // Assert state unchanged
-    assert_eq!(escrow_before, escrow_after, "Escrow state changed after failed record_payment");
-    assert_eq!(config_before, config_after, "Config state changed after failed record_payment");
-    assert_eq!(funder_amt_before, funder_amt_after, "Funder amount changed after failed record_payment");
+    assert_eq!(
+        escrow_before, escrow_after,
+        "Escrow state changed after failed record_payment"
+    );
+    assert_eq!(
+        config_before, config_after,
+        "Config state changed after failed record_payment"
+    );
+    assert_eq!(
+        funder_amt_before, funder_amt_after,
+        "Funder amount changed after failed record_payment"
+    );
 
     // Test admin function rejection leaves state unchanged
     let config_before2 = capture_config_state(env).unwrap();
     let result = client.try_set_paused(&test_env.seller, &true);
     assert!(result.is_err());
     let config_after2 = capture_config_state(env).unwrap();
-    assert_eq!(config_before2, config_after2, "Config state changed after failed set_paused");
+    assert_eq!(
+        config_before2, config_after2,
+        "Config state changed after failed set_paused"
+    );
 }
 
 /// Test zero address rejection across all entrypoints
@@ -818,26 +1009,206 @@ fn auth_comprehensive_matrix() {
     // This test documents the expected authorization for each public entrypoint
     // Role legend: A=Admin, S=Seller, D=Debtor, I=Investor, T=ThirdParty, Z=ZeroAddress
     // ✓ = should succeed, ✗ = should fail
-    
+
     let matrix = vec![
-        ("initialize", vec![("A", true), ("S", false), ("D", false), ("I", false), ("T", false), ("Z", false)]),
-        ("create_escrow_legacy", vec![("A", false), ("S", true), ("D", false), ("I", false), ("T", false), ("Z", false)]),
-        ("fund_escrow_legacy", vec![("A", false), ("S", false), ("D", false), ("I", true), ("T", false), ("Z", false)]),
-        ("record_payment", vec![("A", false), ("S", false), ("D", true), ("I", false), ("T", false), ("Z", false)]),
-        ("refund_escrow", vec![("A", true), ("S", true), ("D", true), ("I", true), ("T", true), ("Z", true)]), // No auth required
-        ("cancel_escrow", vec![("A", false), ("S", true), ("D", false), ("I", false), ("T", false), ("Z", false)]),
-        ("set_payment_distributor", vec![("A", true), ("S", false), ("D", false), ("I", false), ("T", false), ("Z", false)]),
-        ("set_paused", vec![("A", true), ("S", false), ("D", false), ("I", false), ("T", false), ("Z", false)]),
-        ("set_grace_period", vec![("A", true), ("S", false), ("D", false), ("I", false), ("T", false), ("Z", false)]),
-        ("set_category_fee", vec![("A", true), ("S", false), ("D", false), ("I", false), ("T", false), ("Z", false)]),
-        ("set_settlement_fee", vec![("A", true), ("S", false), ("D", false), ("I", false), ("T", false), ("Z", false)]),
-        ("set_min_investment", vec![("A", true), ("S", false), ("D", false), ("I", false), ("T", false), ("Z", false)]),
-        ("set_whitelist_enabled", vec![("A", true), ("S", false), ("D", false), ("I", false), ("T", false), ("Z", false)]),
-        ("set_accreditation_callback", vec![("A", true), ("S", false), ("D", false), ("I", false), ("T", false), ("Z", false)]),
-        ("set_penalty_interest_bps", vec![("A", true), ("S", false), ("D", false), ("I", false), ("T", false), ("Z", false)]),
-        ("set_buyer_whitelisted", vec![("A", true), ("S", false), ("D", false), ("I", false), ("T", false), ("Z", false)]),
-        ("set_early_settlement", vec![("A", false), ("S", true), ("D", false), ("I", false), ("T", false), ("Z", false)]),
-        ("set_installment_schedule", vec![("A", false), ("S", true), ("D", false), ("I", false), ("T", false), ("Z", false)]),
+        (
+            "initialize",
+            vec![
+                ("A", true),
+                ("S", false),
+                ("D", false),
+                ("I", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "create_escrow_legacy",
+            vec![
+                ("A", false),
+                ("S", true),
+                ("D", false),
+                ("I", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "fund_escrow_legacy",
+            vec![
+                ("A", false),
+                ("S", false),
+                ("D", false),
+                ("I", true),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "record_payment",
+            vec![
+                ("A", false),
+                ("S", false),
+                ("D", true),
+                ("I", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "refund_escrow",
+            vec![
+                ("A", true),
+                ("S", true),
+                ("D", true),
+                ("I", true),
+                ("T", true),
+                ("Z", true),
+            ],
+        ), // No auth required
+        (
+            "cancel_escrow",
+            vec![
+                ("A", false),
+                ("S", true),
+                ("D", false),
+                ("I", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "set_payment_distributor",
+            vec![
+                ("A", true),
+                ("S", false),
+                ("D", false),
+                ("I", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "set_paused",
+            vec![
+                ("A", true),
+                ("S", false),
+                ("D", false),
+                ("I", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "set_grace_period",
+            vec![
+                ("A", true),
+                ("S", false),
+                ("D", false),
+                ("I", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "set_category_fee",
+            vec![
+                ("A", true),
+                ("S", false),
+                ("D", false),
+                ("I", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "set_settlement_fee",
+            vec![
+                ("A", true),
+                ("S", false),
+                ("D", false),
+                ("I", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "set_min_investment",
+            vec![
+                ("A", true),
+                ("S", false),
+                ("D", false),
+                ("I", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "set_whitelist_enabled",
+            vec![
+                ("A", true),
+                ("S", false),
+                ("D", false),
+                ("I", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "set_accreditation_callback",
+            vec![
+                ("A", true),
+                ("S", false),
+                ("D", false),
+                ("I", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "set_penalty_interest_bps",
+            vec![
+                ("A", true),
+                ("S", false),
+                ("D", false),
+                ("I", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "set_buyer_whitelisted",
+            vec![
+                ("A", true),
+                ("S", false),
+                ("D", false),
+                ("I", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "set_early_settlement",
+            vec![
+                ("A", false),
+                ("S", true),
+                ("D", false),
+                ("I", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "set_installment_schedule",
+            vec![
+                ("A", false),
+                ("S", true),
+                ("D", false),
+                ("I", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
     ];
 
     // This test serves as documentation - actual validation is in individual tests above
@@ -847,7 +1218,11 @@ fn auth_comprehensive_matrix() {
             println!("  {}: {}", role, if expected { "✓" } else { "✗" });
         }
     }
-    
+
     // Verify matrix is complete (all public entrypoints covered)
-    assert_eq!(matrix.len(), 18, "Authorization matrix should cover all 18 public mutating entrypoints");
+    assert_eq!(
+        matrix.len(),
+        18,
+        "Authorization matrix should cover all 18 public mutating entrypoints"
+    );
 }

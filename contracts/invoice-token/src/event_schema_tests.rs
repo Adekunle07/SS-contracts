@@ -63,14 +63,14 @@ fn event_schema_snapshot_transfer() {
             if let Ok(sym) = Symbol::try_from_val(&env, &topics.get(1).unwrap()) {
                 if sym == Symbol::new(&env, "transfer") {
                     found = true;
-                    
+
                     // Verify topic structure: [contract, "transfer", from, to]
                     assert!(topics.len() >= 4, "transfer should have at least 4 topics");
-                    
+
                     // Verify data: amount (i128)
                     let (_, data) = parse_event(&env, &event);
                     assert_eq!(data.type_of(), soroban_sdk::xdr::ScValType::I128);
-                    
+
                     break;
                 }
             }
@@ -113,17 +113,23 @@ fn event_schema_snapshot_approve() {
             if let Ok(sym) = Symbol::try_from_val(&env, &topics.get(1).unwrap()) {
                 if sym == Symbol::new(&env, "approve") {
                     found = true;
-                    
+
                     // Verify topic structure: [contract, "approve", from, spender]
                     assert!(topics.len() >= 4, "approve should have at least 4 topics");
-                    
+
                     // Verify data: (amount, expiration_ledger)
                     let (_, data) = parse_event(&env, &event);
                     let data_vec = Vec::<Val>::try_from_val(&env, &data).unwrap();
                     assert_eq!(data_vec.len(), 2, "approve data should have 2 fields");
-                    assert_eq!(data_vec.get(0).unwrap().type_of(), soroban_sdk::xdr::ScValType::I128);
-                    assert_eq!(data_vec.get(1).unwrap().type_of(), soroban_sdk::xdr::ScValType::U32);
-                    
+                    assert_eq!(
+                        data_vec.get(0).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::I128
+                    );
+                    assert_eq!(
+                        data_vec.get(1).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::U32
+                    );
+
                     break;
                 }
             }
@@ -165,14 +171,14 @@ fn event_schema_snapshot_mint() {
             if let Ok(sym) = Symbol::try_from_val(&env, &topics.get(1).unwrap()) {
                 if sym == Symbol::new(&env, "mint") {
                     found = true;
-                    
+
                     // Verify topic structure: [contract, "mint", to]
                     assert!(topics.len() >= 3, "mint should have at least 3 topics");
-                    
+
                     // Verify data: amount (i128)
                     let (_, data) = parse_event(&env, &event);
                     assert_eq!(data.type_of(), soroban_sdk::xdr::ScValType::I128);
-                    
+
                     break;
                 }
             }
@@ -216,14 +222,14 @@ fn event_schema_snapshot_burn() {
             if let Ok(sym) = Symbol::try_from_val(&env, &topics.get(1).unwrap()) {
                 if sym == Symbol::new(&env, "burn") {
                     found = true;
-                    
+
                     // Verify topic structure: [contract, "burn", from]
                     assert!(topics.len() >= 3, "burn should have at least 3 topics");
-                    
+
                     // Verify data: amount (i128)
                     let (_, data) = parse_event(&env, &event);
                     assert_eq!(data.type_of(), soroban_sdk::xdr::ScValType::I128);
-                    
+
                     break;
                 }
             }
@@ -264,17 +270,30 @@ fn event_schema_snapshot_transfer_locked_updated() {
             if let Ok(sym) = Symbol::try_from_val(&env, &topics.get(1).unwrap()) {
                 if sym == Symbol::new(&env, "transfer_locked_updated") {
                     found = true;
-                    
+
                     // Verify topic structure: [contract, "transfer_locked_updated"]
-                    assert!(topics.len() >= 2, "transfer_locked_updated should have at least 2 topics");
-                    
+                    assert!(
+                        topics.len() >= 2,
+                        "transfer_locked_updated should have at least 2 topics"
+                    );
+
                     // Verify data: (old_value, new_value)
                     let (_, data) = parse_event(&env, &event);
                     let data_vec = Vec::<Val>::try_from_val(&env, &data).unwrap();
-                    assert_eq!(data_vec.len(), 2, "transfer_locked_updated data should have 2 fields");
-                    assert_eq!(data_vec.get(0).unwrap().type_of(), soroban_sdk::xdr::ScValType::Bool);
-                    assert_eq!(data_vec.get(1).unwrap().type_of(), soroban_sdk::xdr::ScValType::Bool);
-                    
+                    assert_eq!(
+                        data_vec.len(),
+                        2,
+                        "transfer_locked_updated data should have 2 fields"
+                    );
+                    assert_eq!(
+                        data_vec.get(0).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::Bool
+                    );
+                    assert_eq!(
+                        data_vec.get(1).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::Bool
+                    );
+
                     break;
                 }
             }
@@ -316,17 +335,30 @@ fn event_schema_snapshot_minter_updated() {
             if let Ok(sym) = Symbol::try_from_val(&env, &topics.get(1).unwrap()) {
                 if sym == Symbol::new(&env, "minter_updated") {
                     found = true;
-                    
+
                     // Verify topic structure: [contract, "minter_updated"]
-                    assert!(topics.len() >= 2, "minter_updated should have at least 2 topics");
-                    
+                    assert!(
+                        topics.len() >= 2,
+                        "minter_updated should have at least 2 topics"
+                    );
+
                     // Verify data: (old_minter, new_minter)
                     let (_, data) = parse_event(&env, &event);
                     let data_vec = Vec::<Val>::try_from_val(&env, &data).unwrap();
-                    assert_eq!(data_vec.len(), 2, "minter_updated data should have 2 fields");
-                    assert_eq!(data_vec.get(0).unwrap().type_of(), soroban_sdk::xdr::ScValType::Address);
-                    assert_eq!(data_vec.get(1).unwrap().type_of(), soroban_sdk::xdr::ScValType::Address);
-                    
+                    assert_eq!(
+                        data_vec.len(),
+                        2,
+                        "minter_updated data should have 2 fields"
+                    );
+                    assert_eq!(
+                        data_vec.get(0).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::Address
+                    );
+                    assert_eq!(
+                        data_vec.get(1).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::Address
+                    );
+
                     break;
                 }
             }
@@ -367,17 +399,30 @@ fn event_schema_snapshot_paused_updated() {
             if let Ok(sym) = Symbol::try_from_val(&env, &topics.get(1).unwrap()) {
                 if sym == Symbol::new(&env, "paused_updated") {
                     found = true;
-                    
+
                     // Verify topic structure: [contract, "paused_updated"]
-                    assert!(topics.len() >= 2, "paused_updated should have at least 2 topics");
-                    
+                    assert!(
+                        topics.len() >= 2,
+                        "paused_updated should have at least 2 topics"
+                    );
+
                     // Verify data: (old_value, new_value)
                     let (_, data) = parse_event(&env, &event);
                     let data_vec = Vec::<Val>::try_from_val(&env, &data).unwrap();
-                    assert_eq!(data_vec.len(), 2, "paused_updated data should have 2 fields");
-                    assert_eq!(data_vec.get(0).unwrap().type_of(), soroban_sdk::xdr::ScValType::Bool);
-                    assert_eq!(data_vec.get(1).unwrap().type_of(), soroban_sdk::xdr::ScValType::Bool);
-                    
+                    assert_eq!(
+                        data_vec.len(),
+                        2,
+                        "paused_updated data should have 2 fields"
+                    );
+                    assert_eq!(
+                        data_vec.get(0).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::Bool
+                    );
+                    assert_eq!(
+                        data_vec.get(1).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::Bool
+                    );
+
                     break;
                 }
             }
@@ -419,14 +464,17 @@ fn event_schema_snapshot_account_frozen() {
             if let Ok(sym) = Symbol::try_from_val(&env, &topics.get(1).unwrap()) {
                 if sym == Symbol::new(&env, "account_frozen") {
                     found = true;
-                    
+
                     // Verify topic structure: [contract, "account_frozen"]
-                    assert!(topics.len() >= 2, "account_frozen should have at least 2 topics");
-                    
+                    assert!(
+                        topics.len() >= 2,
+                        "account_frozen should have at least 2 topics"
+                    );
+
                     // Verify data: account
                     let (_, data) = parse_event(&env, &event);
                     assert_eq!(data.type_of(), soroban_sdk::xdr::ScValType::Address);
-                    
+
                     break;
                 }
             }
@@ -471,14 +519,14 @@ fn event_schema_snapshot_clawback() {
             if let Ok(sym) = Symbol::try_from_val(&env, &topics.get(1).unwrap()) {
                 if sym == Symbol::new(&env, "clawback") {
                     found = true;
-                    
+
                     // Verify topic structure: [contract, "clawback", from]
                     assert!(topics.len() >= 3, "clawback should have at least 3 topics");
-                    
+
                     // Verify data: amount
                     let (_, data) = parse_event(&env, &event);
                     assert_eq!(data.type_of(), soroban_sdk::xdr::ScValType::I128);
-                    
+
                     break;
                 }
             }
@@ -519,17 +567,26 @@ fn event_schema_snapshot_fee_updated() {
             if let Ok(sym) = Symbol::try_from_val(&env, &topics.get(1).unwrap()) {
                 if sym == Symbol::new(&env, "fee_updated") {
                     found = true;
-                    
+
                     // Verify topic structure: [contract, "fee_updated"]
-                    assert!(topics.len() >= 2, "fee_updated should have at least 2 topics");
-                    
+                    assert!(
+                        topics.len() >= 2,
+                        "fee_updated should have at least 2 topics"
+                    );
+
                     // Verify data: (old_bps, new_bps)
                     let (_, data) = parse_event(&env, &event);
                     let data_vec = Vec::<Val>::try_from_val(&env, &data).unwrap();
                     assert_eq!(data_vec.len(), 2, "fee_updated data should have 2 fields");
-                    assert_eq!(data_vec.get(0).unwrap().type_of(), soroban_sdk::xdr::ScValType::I128);
-                    assert_eq!(data_vec.get(1).unwrap().type_of(), soroban_sdk::xdr::ScValType::I128);
-                    
+                    assert_eq!(
+                        data_vec.get(0).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::I128
+                    );
+                    assert_eq!(
+                        data_vec.get(1).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::I128
+                    );
+
                     break;
                 }
             }
@@ -573,17 +630,30 @@ fn event_schema_snapshot_role_admin_updated() {
             if let Ok(sym) = Symbol::try_from_val(&env, &topics.get(1).unwrap()) {
                 if sym == Symbol::new(&env, "role_admin_updated") {
                     found = true;
-                    
+
                     // Verify topic structure: [contract, "role_admin_updated", role]
-                    assert!(topics.len() >= 3, "role_admin_updated should have at least 3 topics");
-                    
+                    assert!(
+                        topics.len() >= 3,
+                        "role_admin_updated should have at least 3 topics"
+                    );
+
                     // Verify data: (old_admin, new_admin)
                     let (_, data) = parse_event(&env, &event);
                     let data_vec = Vec::<Val>::try_from_val(&env, &data).unwrap();
-                    assert_eq!(data_vec.len(), 2, "role_admin_updated data should have 2 fields");
-                    assert_eq!(data_vec.get(0).unwrap().type_of(), soroban_sdk::xdr::ScValType::Address);
-                    assert_eq!(data_vec.get(1).unwrap().type_of(), soroban_sdk::xdr::ScValType::Address);
-                    
+                    assert_eq!(
+                        data_vec.len(),
+                        2,
+                        "role_admin_updated data should have 2 fields"
+                    );
+                    assert_eq!(
+                        data_vec.get(0).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::Address
+                    );
+                    assert_eq!(
+                        data_vec.get(1).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::Address
+                    );
+
                     break;
                 }
             }
@@ -627,14 +697,17 @@ fn event_schema_snapshot_role_granted() {
             if let Ok(sym) = Symbol::try_from_val(&env, &topics.get(1).unwrap()) {
                 if sym == Symbol::new(&env, "role_granted") {
                     found = true;
-                    
+
                     // Verify topic structure: [contract, "role_granted", role, account]
-                    assert!(topics.len() >= 4, "role_granted should have at least 4 topics");
-                    
+                    assert!(
+                        topics.len() >= 4,
+                        "role_granted should have at least 4 topics"
+                    );
+
                     // Verify data: granted (bool)
                     let (_, data) = parse_event(&env, &event);
                     assert_eq!(data.type_of(), soroban_sdk::xdr::ScValType::Bool);
-                    
+
                     break;
                 }
             }

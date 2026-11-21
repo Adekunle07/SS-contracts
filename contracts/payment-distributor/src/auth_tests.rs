@@ -9,8 +9,7 @@
 use super::*;
 use soroban_sdk::testutils::{Address as _, Events, Ledger};
 use soroban_sdk::{
-    contract, contractimpl, Address, BytesN, Env, IntoVal, Symbol, TryFromVal, Val, Vec,
-    token,
+    contract, contractimpl, token, Address, BytesN, Env, IntoVal, Symbol, TryFromVal, Val, Vec,
 };
 
 use crate::errors::Error;
@@ -129,10 +128,7 @@ fn auth_matrix_distributor_initialize() {
 
     // Re-initialize should fail
     let admin2 = Address::generate(&env);
-    assert_eq!(
-        client.try_initialize(&admin2),
-        Err(Ok(Error::AlreadyInit))
-    );
+    assert_eq!(client.try_initialize(&admin2), Err(Ok(Error::AlreadyInit)));
 }
 
 /// Authorization matrix for distribute_payment (escrow only)
@@ -164,11 +160,15 @@ fn auth_matrix_distribute_payment() {
         &None,
         &None,
     );
-    test_env.escrow_client.fund_escrow_legacy(&test_env.invoice_id, &buyer, &1000);
+    test_env
+        .escrow_client
+        .fund_escrow_legacy(&test_env.invoice_id, &buyer, &1000);
 
     let _ = env.events().all();
 
-    test_env.escrow_client.record_payment(&test_env.invoice_id, &debtor, &1000);
+    test_env
+        .escrow_client
+        .record_payment(&test_env.invoice_id, &debtor, &1000);
 
     // The escrow calls distribute_payment internally, so we test via escrow
     // Direct call with wrong caller should fail
@@ -176,22 +176,42 @@ fn auth_matrix_distribute_payment() {
     let result = client.try_distribute_payment(
         &zero,
         &test_env.invoice_id,
-        &soroban_sdk::vec![env, test_env.payment_token, seller.clone(), buyer.clone(), test_env.admin.clone()],
+        &soroban_sdk::vec![
+            env,
+            test_env.payment_token,
+            seller.clone(),
+            buyer.clone(),
+            test_env.admin.clone()
+        ],
         &soroban_sdk::vec![env, 1000, 1000, 0, 0],
         &1,
     );
-    assert_eq!(result, Err(Ok(Error::UnauthorizedEscrow)), "Zero address escrow rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::UnauthorizedEscrow)),
+        "Zero address escrow rejected"
+    );
 
     // Third party escrow should fail
     let fake_escrow = env.register_contract(None, InvoiceEscrow);
     let result = client.try_distribute_payment(
         &fake_escrow,
         &test_env.invoice_id,
-        &soroban_sdk::vec![env, test_env.payment_token, seller.clone(), buyer.clone(), test_env.admin.clone()],
+        &soroban_sdk::vec![
+            env,
+            test_env.payment_token,
+            seller.clone(),
+            buyer.clone(),
+            test_env.admin.clone()
+        ],
         &soroban_sdk::vec![env, 1000, 1000, 0, 0],
         &1,
     );
-    assert_eq!(result, Err(Ok(Error::UnauthorizedEscrow)), "Unauthorized escrow rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::UnauthorizedEscrow)),
+        "Unauthorized escrow rejected"
+    );
 }
 
 /// Authorization matrix for distribute_refund (escrow only)
@@ -221,7 +241,9 @@ fn auth_matrix_distribute_refund() {
         &None,
         &None,
     );
-    test_env.escrow_client.fund_escrow_legacy(&test_env.invoice_id, &buyer, &1000);
+    test_env
+        .escrow_client
+        .fund_escrow_legacy(&test_env.invoice_id, &buyer, &1000);
 
     let _ = env.events().all();
 
@@ -238,7 +260,11 @@ fn auth_matrix_distribute_refund() {
         &soroban_sdk::vec![env, 1000],
         &3,
     );
-    assert_eq!(result, Err(Ok(Error::UnauthorizedEscrow)), "Zero address escrow rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::UnauthorizedEscrow)),
+        "Zero address escrow rejected"
+    );
 }
 
 /// Authorization matrix for admin-only functions
@@ -254,45 +280,91 @@ fn auth_matrix_distributor_admin_functions() {
     assert!(result.is_ok(), "Admin should succeed");
 
     let result = client.try_set_investor_bonus_bps(&test_env.admin, &test_env.third_party, &100);
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Third party cannot set bonus");
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Third party cannot set bonus"
+    );
 
     let result = client.try_set_investor_bonus_bps(&test_env.admin, &zero, &100);
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Zero address admin rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Zero address admin rejected"
+    );
 
     // set_fee_tiers - admin only
-    let tier = crate::types::FeeTier { min_amount: 0, max_amount: 0, fee_bps: 100 };
-    let result = client.try_set_fee_tiers(&test_env.admin, &test_env.admin, &soroban_sdk::vec![env, tier]);
+    let tier = crate::types::FeeTier {
+        min_amount: 0,
+        max_amount: 0,
+        fee_bps: 100,
+    };
+    let result = client.try_set_fee_tiers(
+        &test_env.admin,
+        &test_env.admin,
+        &soroban_sdk::vec![env, tier],
+    );
     assert!(result.is_ok(), "Admin should succeed");
 
-    let result = client.try_set_fee_tiers(&test_env.admin, &test_env.third_party, &soroban_sdk::vec![env, tier]);
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Third party cannot set fee tiers");
+    let result = client.try_set_fee_tiers(
+        &test_env.admin,
+        &test_env.third_party,
+        &soroban_sdk::vec![env, tier],
+    );
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Third party cannot set fee tiers"
+    );
 
     // set_fee_promotion - admin only
-    let promo = crate::types::FeePromotion { fee_bps: 50, start_ledger: 100, end_ledger: 200 };
+    let promo = crate::types::FeePromotion {
+        fee_bps: 50,
+        start_ledger: 100,
+        end_ledger: 200,
+    };
     let result = client.try_set_fee_promotion(&test_env.admin, &test_env.admin, &Some(promo));
     assert!(result.is_ok(), "Admin should succeed");
 
     let result = client.try_set_fee_promotion(&test_env.admin, &test_env.third_party, &Some(promo));
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Third party cannot set promo");
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Third party cannot set promo"
+    );
 
     // set_fee_recipient - admin only
     let new_recipient = Address::generate(env);
     let result = client.try_set_fee_recipient(&test_env.admin, &test_env.admin, &new_recipient);
     assert!(result.is_ok(), "Admin should succeed");
 
-    let result = client.try_set_fee_recipient(&test_env.admin, &test_env.third_party, &new_recipient);
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Third party cannot set fee recipient");
+    let result =
+        client.try_set_fee_recipient(&test_env.admin, &test_env.third_party, &new_recipient);
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Third party cannot set fee recipient"
+    );
 
     let result = client.try_set_fee_recipient(&test_env.admin, &zero, &new_recipient);
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Zero address admin rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Zero address admin rejected"
+    );
 
     // set_escrow_contract - admin only
     let new_escrow = env.register_contract(None, InvoiceEscrow);
     let result = client.try_set_escrow_contract(&test_env.admin, &test_env.admin, &new_escrow);
     assert!(result.is_ok(), "Admin should succeed");
 
-    let result = client.try_set_escrow_contract(&test_env.admin, &test_env.third_party, &new_escrow);
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Third party cannot set escrow contract");
+    let result =
+        client.try_set_escrow_contract(&test_env.admin, &test_env.third_party, &new_escrow);
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Third party cannot set escrow contract"
+    );
 
     // emergency_withdraw - admin only
     let token_admin = Address::generate(env);
@@ -302,31 +374,72 @@ fn auth_matrix_distributor_admin_functions() {
     payment_asset.mint(&test_env.distributor_id, &1000);
 
     let to = Address::generate(env);
-    let result = client.try_emergency_withdraw(&test_env.admin, &test_env.admin, &payment_token.address(), &to);
+    let result = client.try_emergency_withdraw(
+        &test_env.admin,
+        &test_env.admin,
+        &payment_token.address(),
+        &to,
+    );
     assert!(result.is_ok(), "Admin should succeed");
 
-    let result = client.try_emergency_withdraw(&test_env.admin, &test_env.third_party, &payment_token.address(), &to);
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Third party cannot emergency withdraw");
+    let result = client.try_emergency_withdraw(
+        &test_env.admin,
+        &test_env.third_party,
+        &payment_token.address(),
+        &to,
+    );
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Third party cannot emergency withdraw"
+    );
 
     // sweep_dust - admin only
     payment_asset.mint(&test_env.distributor_id, &1000);
     let result = client.try_sweep_dust(&test_env.admin, &test_env.admin, &payment_token.address());
     assert!(result.is_ok(), "Admin should succeed");
 
-    let result = client.try_sweep_dust(&test_env.admin, &test_env.third_party, &payment_token.address());
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Third party cannot sweep dust");
+    let result = client.try_sweep_dust(
+        &test_env.admin,
+        &test_env.third_party,
+        &payment_token.address(),
+    );
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Third party cannot sweep dust"
+    );
 
     // validate_recipients - admin/operator only
     let recipients = soroban_sdk::vec![env, test_env.admin.clone()];
-    let result = client.try_validate_recipients(&test_env.admin, &test_env.admin, &test_env.payment_token, &recipients);
+    let result = client.try_validate_recipients(
+        &test_env.admin,
+        &test_env.admin,
+        &test_env.payment_token,
+        &recipients,
+    );
     assert!(result.is_ok(), "Admin should succeed");
 
     // Operator should succeed
-    let result = client.try_validate_recipients(&test_env.admin, &test_env.operator, &test_env.payment_token, &recipients);
+    let result = client.try_validate_recipients(
+        &test_env.admin,
+        &test_env.operator,
+        &test_env.payment_token,
+        &recipients,
+    );
     assert!(result.is_ok(), "Operator should succeed");
 
-    let result = client.try_validate_recipients(&test_env.admin, &test_env.third_party, &test_env.payment_token, &recipients);
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Third party cannot validate");
+    let result = client.try_validate_recipients(
+        &test_env.admin,
+        &test_env.third_party,
+        &test_env.payment_token,
+        &recipients,
+    );
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Third party cannot validate"
+    );
 
     // distribute_multi_asset - admin/operator only
     let split = crate::types::DistributionSplit {
@@ -342,15 +455,31 @@ fn auth_matrix_distributor_admin_functions() {
     };
 
     payment_asset.mint(&test_env.distributor_id, &1000);
-    let result = client.try_distribute_multi_asset(&test_env.admin, &test_env.admin, &soroban_sdk::vec![env, route]);
+    let result = client.try_distribute_multi_asset(
+        &test_env.admin,
+        &test_env.admin,
+        &soroban_sdk::vec![env, route],
+    );
     assert!(result.is_ok(), "Admin should succeed");
 
     payment_asset.mint(&test_env.distributor_id, &1000);
-    let result = client.try_distribute_multi_asset(&test_env.admin, &test_env.operator, &soroban_sdk::vec![env, route]);
+    let result = client.try_distribute_multi_asset(
+        &test_env.admin,
+        &test_env.operator,
+        &soroban_sdk::vec![env, route],
+    );
     assert!(result.is_ok(), "Operator should succeed");
 
-    let result = client.try_distribute_multi_asset(&test_env.admin, &test_env.third_party, &soroban_sdk::vec![env, route]);
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Third party cannot distribute multi-asset");
+    let result = client.try_distribute_multi_asset(
+        &test_env.admin,
+        &test_env.third_party,
+        &soroban_sdk::vec![env, route],
+    );
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Third party cannot distribute multi-asset"
+    );
 }
 
 /// Authorization matrix for refund_excess (escrow only)
@@ -381,27 +510,44 @@ fn auth_matrix_refund_excess() {
         &None,
         &None,
     );
-    test_env.escrow_client.fund_escrow_legacy(&test_env.invoice_id, &buyer, &1000);
+    test_env
+        .escrow_client
+        .fund_escrow_legacy(&test_env.invoice_id, &buyer, &1000);
 
     let _ = env.events().all();
-    test_env.escrow_client.record_payment(&test_env.invoice_id, &debtor, &1000);
+    test_env
+        .escrow_client
+        .record_payment(&test_env.invoice_id, &debtor, &1000);
 
     // Overfund distributor
     payment_asset.mint(&test_env.distributor_id, &500);
 
     // Escrow should succeed
-    let result = client.try_refund_excess(&test_env.escrow_id, &test_env.payment_token, &test_env.invoice_id);
+    let result = client.try_refund_excess(
+        &test_env.escrow_id,
+        &test_env.payment_token,
+        &test_env.invoice_id,
+    );
     assert!(result.is_ok(), "Escrow should succeed");
 
     // Wrong escrow should fail
     let fake_escrow = env.register_contract(None, InvoiceEscrow);
-    let result = client.try_refund_excess(&fake_escrow, &test_env.payment_token, &test_env.invoice_id);
-    assert_eq!(result, Err(Ok(Error::UnauthorizedEscrow)), "Unauthorized escrow rejected");
+    let result =
+        client.try_refund_excess(&fake_escrow, &test_env.payment_token, &test_env.invoice_id);
+    assert_eq!(
+        result,
+        Err(Ok(Error::UnauthorizedEscrow)),
+        "Unauthorized escrow rejected"
+    );
 
     // Zero address escrow should fail
     let zero = zero_address(env);
     let result = client.try_refund_excess(&zero, &test_env.payment_token, &test_env.invoice_id);
-    assert_eq!(result, Err(Ok(Error::UnauthorizedEscrow)), "Zero address escrow rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::UnauthorizedEscrow)),
+        "Zero address escrow rejected"
+    );
 }
 
 /// Test state unchanged after rejected calls
@@ -416,21 +562,29 @@ fn auth_distributor_rejected_calls_leave_state_unchanged() {
 
     // Try to set fee recipient with third party
     let new_recipient = Address::generate(env);
-    let result = client.try_set_fee_recipient(&test_env.admin, &test_env.third_party, &new_recipient);
+    let result =
+        client.try_set_fee_recipient(&test_env.admin, &test_env.third_party, &new_recipient);
     assert!(result.is_err());
 
     // Admin should be unchanged
     let admin_after = client.get_admin().unwrap();
-    assert_eq!(admin_before, admin_after, "Admin changed after failed set_fee_recipient");
+    assert_eq!(
+        admin_before, admin_after,
+        "Admin changed after failed set_fee_recipient"
+    );
 
     // Try to set escrow contract with third party
     let new_escrow = env.register_contract(None, InvoiceEscrow);
     let escrow_before = client.get_escrow_contract().unwrap();
-    let result = client.try_set_escrow_contract(&test_env.admin, &test_env.third_party, &new_escrow);
+    let result =
+        client.try_set_escrow_contract(&test_env.admin, &test_env.third_party, &new_escrow);
     assert!(result.is_err());
 
     let escrow_after = client.get_escrow_contract().unwrap();
-    assert_eq!(escrow_before, escrow_after, "Escrow contract changed after failed set_escrow_contract");
+    assert_eq!(
+        escrow_before, escrow_after,
+        "Escrow contract changed after failed set_escrow_contract"
+    );
 }
 
 /// Comprehensive authorization matrix documentation
@@ -438,26 +592,206 @@ fn auth_distributor_rejected_calls_leave_state_unchanged() {
 fn auth_distributor_comprehensive_matrix() {
     // Role legend: A=Admin, E=Escrow, O=Operator, T=ThirdParty, Z=ZeroAddress
     let matrix = vec![
-        ("initialize", vec![("A", true), ("E", false), ("O", false), ("T", false), ("Z", false)]),
-        ("distribute_payment", vec![("A", false), ("E", true), ("O", false), ("T", false), ("Z", false)]),
-        ("distribute_refund", vec![("A", false), ("E", true), ("O", false), ("T", false), ("Z", false)]),
-        ("set_investor_bonus_bps", vec![("A", true), ("E", false), ("O", false), ("T", false), ("Z", false)]),
-        ("set_fee_tiers", vec![("A", true), ("E", false), ("O", false), ("T", false), ("Z", false)]),
-        ("set_fee_promotion", vec![("A", true), ("E", false), ("O", false), ("T", false), ("Z", false)]),
-        ("set_fee_recipient", vec![("A", true), ("E", false), ("O", false), ("T", false), ("Z", false)]),
-        ("set_escrow_contract", vec![("A", true), ("E", false), ("O", false), ("T", false), ("Z", false)]),
-        ("emergency_withdraw", vec![("A", true), ("E", false), ("O", false), ("T", false), ("Z", false)]),
-        ("sweep_dust", vec![("A", true), ("E", false), ("O", false), ("T", false), ("Z", false)]),
-        ("validate_recipients", vec![("A", true), ("E", false), ("O", true), ("T", false), ("Z", false)]),
-        ("distribute_multi_asset", vec![("A", true), ("E", false), ("O", true), ("T", false), ("Z", false)]),
-        ("refund_excess", vec![("A", false), ("E", true), ("O", false), ("T", false), ("Z", false)]),
-        ("get_admin", vec![("A", true), ("E", true), ("O", true), ("T", true), ("Z", true)]), // view
-        ("get_fee_recipient", vec![("A", true), ("E", true), ("O", true), ("T", true), ("Z", true)]), // view
-        ("get_escrow_contract", vec![("A", true), ("E", true), ("O", true), ("T", true), ("Z", true)]), // view
-        ("get_distribution_state", vec![("A", true), ("E", true), ("O", true), ("T", true), ("Z", true)]), // view
-        ("get_investor_bonus_bps", vec![("A", true), ("E", true), ("O", true), ("T", true), ("Z", true)]), // view
-        ("get_fee_promotion", vec![("A", true), ("E", true), ("O", true), ("T", true), ("Z", true)]), // view
-        ("get_fee_tiers", vec![("A", true), ("E", true), ("O", true), ("T", true), ("Z", true)]), // view
+        (
+            "initialize",
+            vec![
+                ("A", true),
+                ("E", false),
+                ("O", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "distribute_payment",
+            vec![
+                ("A", false),
+                ("E", true),
+                ("O", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "distribute_refund",
+            vec![
+                ("A", false),
+                ("E", true),
+                ("O", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "set_investor_bonus_bps",
+            vec![
+                ("A", true),
+                ("E", false),
+                ("O", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "set_fee_tiers",
+            vec![
+                ("A", true),
+                ("E", false),
+                ("O", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "set_fee_promotion",
+            vec![
+                ("A", true),
+                ("E", false),
+                ("O", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "set_fee_recipient",
+            vec![
+                ("A", true),
+                ("E", false),
+                ("O", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "set_escrow_contract",
+            vec![
+                ("A", true),
+                ("E", false),
+                ("O", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "emergency_withdraw",
+            vec![
+                ("A", true),
+                ("E", false),
+                ("O", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "sweep_dust",
+            vec![
+                ("A", true),
+                ("E", false),
+                ("O", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "validate_recipients",
+            vec![
+                ("A", true),
+                ("E", false),
+                ("O", true),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "distribute_multi_asset",
+            vec![
+                ("A", true),
+                ("E", false),
+                ("O", true),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "refund_excess",
+            vec![
+                ("A", false),
+                ("E", true),
+                ("O", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "get_admin",
+            vec![
+                ("A", true),
+                ("E", true),
+                ("O", true),
+                ("T", true),
+                ("Z", true),
+            ],
+        ), // view
+        (
+            "get_fee_recipient",
+            vec![
+                ("A", true),
+                ("E", true),
+                ("O", true),
+                ("T", true),
+                ("Z", true),
+            ],
+        ), // view
+        (
+            "get_escrow_contract",
+            vec![
+                ("A", true),
+                ("E", true),
+                ("O", true),
+                ("T", true),
+                ("Z", true),
+            ],
+        ), // view
+        (
+            "get_distribution_state",
+            vec![
+                ("A", true),
+                ("E", true),
+                ("O", true),
+                ("T", true),
+                ("Z", true),
+            ],
+        ), // view
+        (
+            "get_investor_bonus_bps",
+            vec![
+                ("A", true),
+                ("E", true),
+                ("O", true),
+                ("T", true),
+                ("Z", true),
+            ],
+        ), // view
+        (
+            "get_fee_promotion",
+            vec![
+                ("A", true),
+                ("E", true),
+                ("O", true),
+                ("T", true),
+                ("Z", true),
+            ],
+        ), // view
+        (
+            "get_fee_tiers",
+            vec![
+                ("A", true),
+                ("E", true),
+                ("O", true),
+                ("T", true),
+                ("Z", true),
+            ],
+        ), // view
     ];
 
     for (method, roles) in matrix {
@@ -467,5 +801,9 @@ fn auth_distributor_comprehensive_matrix() {
         }
     }
 
-    assert_eq!(matrix.len(), 19, "Authorization matrix should cover all 19 entrypoints");
+    assert_eq!(
+        matrix.len(),
+        19,
+        "Authorization matrix should cover all 19 entrypoints"
+    );
 }

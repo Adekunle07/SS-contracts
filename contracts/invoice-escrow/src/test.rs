@@ -11100,20 +11100,40 @@ fn deprecation_inventory_covers_all_legacy_entrypoints() {
 
     // Test that deprecation records are returned
     let records = client.get_deprecation_records();
-    assert!(records.len() >= 4, "Expected at least 4 deprecation records");
+    assert!(
+        records.len() >= 4,
+        "Expected at least 4 deprecation records"
+    );
 
     // Verify each deprecated method is documented
     let method_names: soroban_sdk::Vec<Symbol> = records.iter().map(|r| r.method).collect();
-    assert!(method_names.iter().any(|m| m == Symbol::new(&env, "create_escrow_legacy")));
-    assert!(method_names.iter().any(|m| m == Symbol::new(&env, "fund_escrow_legacy")));
-    assert!(method_names.iter().any(|m| m == Symbol::new(&env, "create_escrow_with_tokens")));
-    assert!(method_names.iter().any(|m| m == Symbol::new(&env, "fund_escrow_with_token")));
+    assert!(method_names
+        .iter()
+        .any(|m| m == Symbol::new(&env, "create_escrow_legacy")));
+    assert!(method_names
+        .iter()
+        .any(|m| m == Symbol::new(&env, "fund_escrow_legacy")));
+    assert!(method_names
+        .iter()
+        .any(|m| m == Symbol::new(&env, "create_escrow_with_tokens")));
+    assert!(method_names
+        .iter()
+        .any(|m| m == Symbol::new(&env, "fund_escrow_with_token")));
 
     // Verify each record has replacement guidance
     for record in records.iter() {
-        assert!(!record.replacement.is_empty(&env), "Replacement must be specified");
-        assert!(!record.guidance.is_empty(&env), "Guidance must be specified");
-        assert!(record.min_warning_days >= 90, "Minimum 90-day warning period");
+        assert!(
+            !record.replacement.is_empty(&env),
+            "Replacement must be specified"
+        );
+        assert!(
+            !record.guidance.is_empty(&env),
+            "Guidance must be specified"
+        );
+        assert!(
+            record.min_warning_days >= 90,
+            "Minimum 90-day warning period"
+        );
     }
 }
 
@@ -11156,11 +11176,17 @@ fn deprecation_legacy_entrypoints_still_functional() {
         &None,
         &None,
     );
-    assert_eq!(client.get_escrow_status(&invoice_id), Ok(EscrowStatus::Created));
+    assert_eq!(
+        client.get_escrow_status(&invoice_id),
+        Ok(EscrowStatus::Created)
+    );
 
     // Test fund_escrow_legacy still works
     client.fund_escrow_legacy(&invoice_id, &buyer, &1000);
-    assert_eq!(client.get_escrow_status(&invoice_id), Ok(EscrowStatus::Funded));
+    assert_eq!(
+        client.get_escrow_status(&invoice_id),
+        Ok(EscrowStatus::Funded)
+    );
 
     // Test create_escrow_with_tokens still works
     let invoice_id2 = Symbol::new(&env, "INV_DEPR2");
@@ -11178,11 +11204,17 @@ fn deprecation_legacy_entrypoints_still_functional() {
         &None,
         &soroban_sdk::vec![&env, payment_token.clone()],
     );
-    assert_eq!(client.get_escrow_status(&invoice_id2), Ok(EscrowStatus::Created));
+    assert_eq!(
+        client.get_escrow_status(&invoice_id2),
+        Ok(EscrowStatus::Created)
+    );
 
     // Test fund_escrow_with_token still works
     client.fund_escrow_with_token(&invoice_id2, &buyer, &1000, &payment_token);
-    assert_eq!(client.get_escrow_status(&invoice_id2), Ok(EscrowStatus::Funded));
+    assert_eq!(
+        client.get_escrow_status(&invoice_id2),
+        Ok(EscrowStatus::Funded)
+    );
 }
 
 #[test]

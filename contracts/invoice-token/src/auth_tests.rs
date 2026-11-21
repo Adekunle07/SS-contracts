@@ -103,13 +103,29 @@ fn auth_matrix_token_initialize() {
 
     let admin = Address::generate(&env);
     let minter = Address::generate(&env);
-    assert!(client.try_initialize(&admin, &"Test".into_val(&env), &"TTK".into_val(&env), &7, &Symbol::new(&env, "INV"), &minter).is_ok());
+    assert!(client
+        .try_initialize(
+            &admin,
+            &"Test".into_val(&env),
+            &"TTK".into_val(&env),
+            &7,
+            &Symbol::new(&env, "INV"),
+            &minter
+        )
+        .is_ok());
 
     // Re-initialize should fail
     let admin2 = Address::generate(&env);
     let minter2 = Address::generate(&env);
     assert_eq!(
-        client.try_initialize(&admin2, &"Test".into_val(&env), &"TTK".into_val(&env), &7, &Symbol::new(&env, "INV"), &minter2),
+        client.try_initialize(
+            &admin2,
+            &"Test".into_val(&env),
+            &"TTK".into_val(&env),
+            &7,
+            &Symbol::new(&env, "INV"),
+            &minter2
+        ),
         Err(Ok(Error::AlreadyInit))
     );
 }
@@ -130,40 +146,72 @@ fn auth_matrix_transfer() {
 
     // Third party as 'from' should fail (mock_all_auths bypasses, test zero address)
     let result = client.try_transfer(&zero, &to, &100);
-    assert_eq!(result, Err(Ok(Error::InvalidAddress)), "Zero address from rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAddress)),
+        "Zero address from rejected"
+    );
 
     // Zero address 'to' should fail
     let result = client.try_transfer(&test_env.holder, &zero, &100);
-    assert_eq!(result, Err(Ok(Error::InvalidAddress)), "Zero address to rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAddress)),
+        "Zero address to rejected"
+    );
 
     // Same from and to should fail
     let result = client.try_transfer(&test_env.holder, &test_env.holder, &100);
-    assert_eq!(result, Err(Ok(Error::InvalidAddress)), "Same from and to rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAddress)),
+        "Same from and to rejected"
+    );
 
     // Negative amount should fail
     let result = client.try_transfer(&test_env.holder, &to, &-100);
-    assert_eq!(result, Err(Ok(Error::InvalidAmount)), "Negative amount rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAmount)),
+        "Negative amount rejected"
+    );
 
     // Zero amount should fail
     let result = client.try_transfer(&test_env.holder, &to, &0);
-    assert_eq!(result, Err(Ok(Error::InvalidAmount)), "Zero amount rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAmount)),
+        "Zero amount rejected"
+    );
 
     // Transfer when paused should fail
     client.set_paused(&true);
     let result = client.try_transfer(&test_env.holder, &to, &100);
-    assert_eq!(result, Err(Ok(Error::Paused)), "Transfer when paused rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::Paused)),
+        "Transfer when paused rejected"
+    );
     client.set_paused(&false);
 
     // Transfer when locked (non-admin) should fail
     client.set_transfer_locked(&test_env.admin, &true);
     let result = client.try_transfer(&test_env.holder, &to, &100);
-    assert_eq!(result, Err(Ok(Error::TransferLocked)), "Transfer when locked rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::TransferLocked)),
+        "Transfer when locked rejected"
+    );
     client.set_transfer_locked(&test_env.admin, &false);
 
     // Frozen account should fail
     client.freeze_account(&test_env.holder);
     let result = client.try_transfer(&test_env.holder, &to, &100);
-    assert_eq!(result, Err(Ok(Error::AccountFrozen)), "Frozen account rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::AccountFrozen)),
+        "Frozen account rejected"
+    );
     client.unfreeze_account(&test_env.holder);
 }
 
@@ -181,38 +229,70 @@ fn auth_matrix_approve() {
 
     // Zero address 'from' should fail
     let result = client.try_approve(&zero, &test_env.spender, &500, &1000);
-    assert_eq!(result, Err(Ok(Error::InvalidAddress)), "Zero address from rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAddress)),
+        "Zero address from rejected"
+    );
 
     // Zero address 'spender' should fail
     let result = client.try_approve(&test_env.holder, &zero, &500, &1000);
-    assert_eq!(result, Err(Ok(Error::InvalidAddress)), "Zero address spender rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAddress)),
+        "Zero address spender rejected"
+    );
 
     // Same from and spender should fail
     let result = client.try_approve(&test_env.holder, &test_env.holder, &500, &1000);
-    assert_eq!(result, Err(Ok(Error::InvalidAddress)), "Same from and spender rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAddress)),
+        "Same from and spender rejected"
+    );
 
     // Negative amount should fail
     let result = client.try_approve(&test_env.holder, &test_env.spender, &-500, &1000);
-    assert_eq!(result, Err(Ok(Error::InvalidAmount)), "Negative amount rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAmount)),
+        "Negative amount rejected"
+    );
 
     // Zero amount with expired ledger should fail
     let result = client.try_approve(&test_env.holder, &test_env.spender, &0, &100);
-    assert_eq!(result, Err(Ok(Error::InvalidExpiration)), "Zero amount with past expiration rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidExpiration)),
+        "Zero amount with past expiration rejected"
+    );
 
     // Expired ledger should fail
     let result = client.try_approve(&test_env.holder, &test_env.spender, &500, &100);
-    assert_eq!(result, Err(Ok(Error::InvalidExpiration)), "Expired ledger rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidExpiration)),
+        "Expired ledger rejected"
+    );
 
     // When paused should fail
     client.set_paused(&true);
     let result = client.try_approve(&test_env.holder, &test_env.spender, &500, &1000);
-    assert_eq!(result, Err(Ok(Error::Paused)), "Approve when paused rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::Paused)),
+        "Approve when paused rejected"
+    );
     client.set_paused(&false);
 
     // Frozen account should fail
     client.freeze_account(&test_env.holder);
     let result = client.try_approve(&test_env.holder, &test_env.spender, &500, &1000);
-    assert_eq!(result, Err(Ok(Error::AccountFrozen)), "Frozen account rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::AccountFrozen)),
+        "Frozen account rejected"
+    );
     client.unfreeze_account(&test_env.holder);
 }
 
@@ -234,53 +314,98 @@ fn auth_matrix_transfer_from() {
 
     // Zero address 'spender' should fail
     let result = client.try_transfer_from(&zero, &test_env.holder, &to, &100);
-    assert_eq!(result, Err(Ok(Error::InvalidAddress)), "Zero address spender rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAddress)),
+        "Zero address spender rejected"
+    );
 
     // Zero address 'from' should fail
     let result = client.try_transfer_from(&test_env.spender, &zero, &to, &100);
-    assert_eq!(result, Err(Ok(Error::InvalidAddress)), "Zero address from rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAddress)),
+        "Zero address from rejected"
+    );
 
     // Zero address 'to' should fail
     let result = client.try_transfer_from(&test_env.spender, &test_env.holder, &zero, &100);
-    assert_eq!(result, Err(Ok(Error::InvalidAddress)), "Zero address to rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAddress)),
+        "Zero address to rejected"
+    );
 
     // Same from and to should fail
-    let result = client.try_transfer_from(&test_env.spender, &test_env.holder, &test_env.holder, &100);
-    assert_eq!(result, Err(Ok(Error::InvalidAddress)), "Same from and to rejected");
+    let result =
+        client.try_transfer_from(&test_env.spender, &test_env.holder, &test_env.holder, &100);
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAddress)),
+        "Same from and to rejected"
+    );
 
     // Negative amount should fail
     let result = client.try_transfer_from(&test_env.spender, &test_env.holder, &to, &-100);
-    assert_eq!(result, Err(Ok(Error::InvalidAmount)), "Negative amount rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAmount)),
+        "Negative amount rejected"
+    );
 
     // Zero amount should fail
     let result = client.try_transfer_from(&test_env.spender, &test_env.holder, &to, &0);
-    assert_eq!(result, Err(Ok(Error::InvalidAmount)), "Zero amount rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAmount)),
+        "Zero amount rejected"
+    );
 
     // Insufficient allowance should fail
     let result = client.try_transfer_from(&test_env.spender, &test_env.holder, &to, &1000);
-    assert_eq!(result, Err(Ok(Error::InsufficientAllowance)), "Insufficient allowance rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InsufficientAllowance)),
+        "Insufficient allowance rejected"
+    );
 
     // Expired allowance should fail
     client.approve(&test_env.holder, &test_env.spender, &500, &100); // expires soon
     env.ledger().with_mut(|li| li.sequence = 200);
     let result = client.try_transfer_from(&test_env.spender, &test_env.holder, &to, &100);
-    assert_eq!(result, Err(Ok(Error::AllowanceExpired)), "Expired allowance rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::AllowanceExpired)),
+        "Expired allowance rejected"
+    );
 
     // When paused should fail
     client.set_paused(&true);
     let result = client.try_transfer_from(&test_env.spender, &test_env.holder, &to, &100);
-    assert_eq!(result, Err(Ok(Error::Paused)), "Transfer_from when paused rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::Paused)),
+        "Transfer_from when paused rejected"
+    );
     client.set_paused(&false);
 
     // Frozen accounts should fail
     client.freeze_account(&test_env.spender);
     let result = client.try_transfer_from(&test_env.spender, &test_env.holder, &to, &100);
-    assert_eq!(result, Err(Ok(Error::AccountFrozen)), "Frozen spender rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::AccountFrozen)),
+        "Frozen spender rejected"
+    );
     client.unfreeze_account(&test_env.spender);
 
     client.freeze_account(&test_env.holder);
     let result = client.try_transfer_from(&test_env.spender, &test_env.holder, &to, &100);
-    assert_eq!(result, Err(Ok(Error::AccountFrozen)), "Frozen from rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::AccountFrozen)),
+        "Frozen from rejected"
+    );
     client.unfreeze_account(&test_env.holder);
 
     client.freeze_account(&to);
@@ -303,19 +428,35 @@ fn auth_matrix_burn() {
 
     // Zero address should fail
     let result = client.try_burn(&zero, &100);
-    assert_eq!(result, Err(Ok(Error::InvalidAddress)), "Zero address rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAddress)),
+        "Zero address rejected"
+    );
 
     // Negative amount should fail
     let result = client.try_burn(&test_env.holder, &-100);
-    assert_eq!(result, Err(Ok(Error::InvalidAmount)), "Negative amount rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAmount)),
+        "Negative amount rejected"
+    );
 
     // Zero amount should fail
     let result = client.try_burn(&test_env.holder, &0);
-    assert_eq!(result, Err(Ok(Error::InvalidAmount)), "Zero amount rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAmount)),
+        "Zero amount rejected"
+    );
 
     // Insufficient balance should fail
     let result = client.try_burn(&test_env.holder, &2000);
-    assert_eq!(result, Err(Ok(Error::InsufficientBalance)), "Insufficient balance rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InsufficientBalance)),
+        "Insufficient balance rejected"
+    );
 
     // When paused should fail
     client.set_paused(&true);
@@ -326,7 +467,11 @@ fn auth_matrix_burn() {
     // Frozen account should fail
     client.freeze_account(&test_env.holder);
     let result = client.try_burn(&test_env.holder, &100);
-    assert_eq!(result, Err(Ok(Error::AccountFrozen)), "Frozen account rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::AccountFrozen)),
+        "Frozen account rejected"
+    );
     client.unfreeze_account(&test_env.holder);
 }
 
@@ -347,49 +492,89 @@ fn auth_matrix_burn_from() {
 
     // Zero address spender should fail
     let result = client.try_burn_from(&zero, &test_env.holder, &100);
-    assert_eq!(result, Err(Ok(Error::InvalidAddress)), "Zero address spender rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAddress)),
+        "Zero address spender rejected"
+    );
 
     // Zero address from should fail
     let result = client.try_burn_from(&test_env.spender, &zero, &100);
-    assert_eq!(result, Err(Ok(Error::InvalidAddress)), "Zero address from rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAddress)),
+        "Zero address from rejected"
+    );
 
     // Negative amount should fail
     let result = client.try_burn_from(&test_env.spender, &test_env.holder, &-100);
-    assert_eq!(result, Err(Ok(Error::InvalidAmount)), "Negative amount rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAmount)),
+        "Negative amount rejected"
+    );
 
     // Zero amount should fail
     let result = client.try_burn_from(&test_env.spender, &test_env.holder, &0);
-    assert_eq!(result, Err(Ok(Error::InvalidAmount)), "Zero amount rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAmount)),
+        "Zero amount rejected"
+    );
 
     // Insufficient allowance should fail
     let result = client.try_burn_from(&test_env.spender, &test_env.holder, &1000);
-    assert_eq!(result, Err(Ok(Error::InsufficientAllowance)), "Insufficient allowance rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InsufficientAllowance)),
+        "Insufficient allowance rejected"
+    );
 
     // Expired allowance should fail
     client.approve(&test_env.holder, &test_env.spender, &500, &100);
     env.ledger().with_mut(|li| li.sequence = 200);
     let result = client.try_burn_from(&test_env.spender, &test_env.holder, &100);
-    assert_eq!(result, Err(Ok(Error::AllowanceExpired)), "Expired allowance rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::AllowanceExpired)),
+        "Expired allowance rejected"
+    );
 
     // Insufficient balance should fail
     let result = client.try_burn_from(&test_env.spender, &test_env.holder, &2000);
-    assert_eq!(result, Err(Ok(Error::InsufficientBalance)), "Insufficient balance rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InsufficientBalance)),
+        "Insufficient balance rejected"
+    );
 
     // When paused should fail
     client.set_paused(&true);
     let result = client.try_burn_from(&test_env.spender, &test_env.holder, &100);
-    assert_eq!(result, Err(Ok(Error::Paused)), "Burn_from when paused rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::Paused)),
+        "Burn_from when paused rejected"
+    );
     client.set_paused(&false);
 
     // Frozen accounts should fail
     client.freeze_account(&test_env.spender);
     let result = client.try_burn_from(&test_env.spender, &test_env.holder, &100);
-    assert_eq!(result, Err(Ok(Error::AccountFrozen)), "Frozen spender rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::AccountFrozen)),
+        "Frozen spender rejected"
+    );
     client.unfreeze_account(&test_env.spender);
 
     client.freeze_account(&test_env.holder);
     let result = client.try_burn_from(&test_env.spender, &test_env.holder, &100);
-    assert_eq!(result, Err(Ok(Error::AccountFrozen)), "Frozen from rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::AccountFrozen)),
+        "Frozen from rejected"
+    );
     client.unfreeze_account(&test_env.holder);
 }
 
@@ -420,19 +605,35 @@ fn auth_matrix_mint() {
 
     // Zero address should fail
     let result = client.try_mint(&to, &100, &zero);
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Zero address rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Zero address rejected"
+    );
 
     // Zero address 'to' should fail
     let result = client.try_mint(&zero, &100, &test_env.admin);
-    assert_eq!(result, Err(Ok(Error::InvalidAddress)), "Zero address to rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAddress)),
+        "Zero address to rejected"
+    );
 
     // Negative amount should fail
     let result = client.try_mint(&to, &-100, &test_env.admin);
-    assert_eq!(result, Err(Ok(Error::InvalidAmount)), "Negative amount rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAmount)),
+        "Negative amount rejected"
+    );
 
     // Zero amount should fail
     let result = client.try_mint(&to, &0, &test_env.admin);
-    assert_eq!(result, Err(Ok(Error::InvalidAmount)), "Zero amount rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAmount)),
+        "Zero amount rejected"
+    );
 
     // When paused should fail
     client.set_paused(&true);
@@ -443,13 +644,21 @@ fn auth_matrix_mint() {
     // Frozen admin should fail
     client.freeze_account(&test_env.admin);
     let result = client.try_mint(&to, &100, &test_env.admin);
-    assert_eq!(result, Err(Ok(Error::AccountFrozen)), "Frozen admin rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::AccountFrozen)),
+        "Frozen admin rejected"
+    );
     client.unfreeze_account(&test_env.admin);
 
     // Frozen minter should fail
     client.freeze_account(&test_env.minter);
     let result = client.try_mint(&to, &100, &test_env.minter);
-    assert_eq!(result, Err(Ok(Error::AccountFrozen)), "Frozen minter rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::AccountFrozen)),
+        "Frozen minter rejected"
+    );
     client.unfreeze_account(&test_env.minter);
 
     // Frozen 'to' should fail
@@ -478,7 +687,11 @@ fn auth_matrix_token_admin_functions() {
     assert_eq!(result, Err(Ok(Error::Unauthorized)), "Holder rejected");
 
     let result = client.try_set_transfer_locked(&zero, &true);
-    assert_eq!(result, Err(Ok(Error::InvalidAddress)), "Zero address rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAddress)),
+        "Zero address rejected"
+    );
 
     // set_minter - admin only
     let new_minter = Address::generate(env);
@@ -487,7 +700,11 @@ fn auth_matrix_token_admin_functions() {
 
     // Zero address new_minter should fail
     let result = client.try_set_minter(&zero);
-    assert_eq!(result, Err(Ok(Error::InvalidAddress)), "Zero address new_minter rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAddress)),
+        "Zero address new_minter rejected"
+    );
 
     // set_paused - admin only
     let result = client.try_set_paused(&true);
@@ -501,7 +718,11 @@ fn auth_matrix_token_admin_functions() {
     assert_eq!(result, Err(Ok(Error::Unauthorized)), "Holder rejected");
 
     let result = client.try_set_fee_bps(&zero, &100);
-    assert_eq!(result, Err(Ok(Error::InvalidAddress)), "Zero address rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAddress)),
+        "Zero address rejected"
+    );
 
     // set_transfer_restriction - admin only
     let restriction = Some(Address::generate(env));
@@ -514,7 +735,11 @@ fn auth_matrix_token_admin_functions() {
     assert!(result.is_ok(), "Admin should succeed");
 
     let result = client.try_freeze_account(&zero);
-    assert_eq!(result, Err(Ok(Error::InvalidAddress)), "Zero address rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::InvalidAddress)),
+        "Zero address rejected"
+    );
 
     // unfreeze_account - admin only
     client.freeze_account(&account);
@@ -527,10 +752,14 @@ fn auth_matrix_token_admin_functions() {
     assert!(result.is_ok(), "Admin should succeed");
 
     let result = client.try_clawback(&test_env.holder, &100); // already clawed back some
-    // clawback from non-frozen should fail
+                                                              // clawback from non-frozen should fail
     client.unfreeze_account(&test_env.holder);
     let result = client.try_clawback(&test_env.holder, &100);
-    assert_eq!(result, Err(Ok(Error::AccountNotFrozen)), "Non-frozen account rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::AccountNotFrozen)),
+        "Non-frozen account rejected"
+    );
 
     // set_role_admin - role admin only
     let role = Symbol::new(env, "minter");
@@ -539,7 +768,11 @@ fn auth_matrix_token_admin_functions() {
     assert!(result.is_ok(), "Role admin should succeed");
 
     let result = client.try_set_role_admin(&test_env.holder, &role, &new_admin);
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Non-role-admin rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Non-role-admin rejected"
+    );
 
     // grant_role - role admin only
     let account = Address::generate(env);
@@ -547,7 +780,11 @@ fn auth_matrix_token_admin_functions() {
     assert!(result.is_ok(), "Role admin should succeed");
 
     let result = client.try_grant_role(&test_env.holder, &role, &account);
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Non-role-admin rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Non-role-admin rejected"
+    );
 
     // revoke_role - role admin only
     client.grant_role(&test_env.admin, &role, &account);
@@ -555,7 +792,11 @@ fn auth_matrix_token_admin_functions() {
     assert!(result.is_ok(), "Role admin should succeed");
 
     let result = client.try_revoke_role(&test_env.holder, &role, &account);
-    assert_eq!(result, Err(Ok(Error::Unauthorized)), "Non-role-admin rejected");
+    assert_eq!(
+        result,
+        Err(Ok(Error::Unauthorized)),
+        "Non-role-admin rejected"
+    );
 }
 
 /// Test state unchanged after rejected calls
@@ -576,18 +817,28 @@ fn auth_token_rejected_calls_leave_state_unchanged() {
 
     // Balance should be unchanged
     let balance_after = client.balance(test_env.holder.clone()).unwrap();
-    assert_eq!(balance_before, balance_after, "Balance changed after failed transfer");
+    assert_eq!(
+        balance_before, balance_after,
+        "Balance changed after failed transfer"
+    );
 
     // Capture allowance before failed approve
-    let allowance_before = client.allowance(test_env.holder.clone(), test_env.spender.clone()).unwrap();
+    let allowance_before = client
+        .allowance(test_env.holder.clone(), test_env.spender.clone())
+        .unwrap();
 
     // Try approve with zero address spender
     let result = client.try_approve(&test_env.holder, &zero, &500, &1000);
     assert!(result.is_err());
 
     // Allowance should be unchanged
-    let allowance_after = client.allowance(test_env.holder.clone(), test_env.spender.clone()).unwrap();
-    assert_eq!(allowance_before, allowance_after, "Allowance changed after failed approve");
+    let allowance_after = client
+        .allowance(test_env.holder.clone(), test_env.spender.clone())
+        .unwrap();
+    assert_eq!(
+        allowance_before, allowance_after,
+        "Allowance changed after failed approve"
+    );
 }
 
 /// Comprehensive authorization matrix documentation
@@ -596,40 +847,370 @@ fn auth_token_comprehensive_matrix() {
     // Role legend: A=Admin, M=Minter, H=Holder, S=Spender, T=ThirdParty, Z=ZeroAddress
     let matrix = vec![
         // Mutating functions
-        ("initialize", vec![("A", true), ("M", false), ("H", false), ("S", false), ("T", false), ("Z", false)]),
-        ("transfer", vec![("A", false), ("M", false), ("H", true), ("S", false), ("T", false), ("Z", false)]),
-        ("approve", vec![("A", false), ("M", false), ("H", true), ("S", false), ("T", false), ("Z", false)]),
-        ("transfer_from", vec![("A", false), ("M", false), ("H", false), ("S", true), ("T", false), ("Z", false)]),
-        ("burn", vec![("A", false), ("M", false), ("H", true), ("S", false), ("T", false), ("Z", false)]),
-        ("burn_from", vec![("A", false), ("M", false), ("H", false), ("S", true), ("T", false), ("Z", false)]),
-        ("mint", vec![("A", true), ("M", true), ("H", false), ("S", false), ("T", false), ("Z", false)]),
-        ("set_transfer_locked", vec![("A", true), ("M", true), ("H", false), ("S", false), ("T", false), ("Z", false)]),
-        ("set_minter", vec![("A", true), ("M", false), ("H", false), ("S", false), ("T", false), ("Z", false)]),
-        ("set_paused", vec![("A", true), ("M", false), ("H", false), ("S", false), ("T", false), ("Z", false)]),
-        ("set_fee_bps", vec![("A", true), ("M", false), ("H", false), ("S", false), ("T", false), ("Z", false)]),
-        ("set_transfer_restriction", vec![("A", true), ("M", false), ("H", false), ("S", false), ("T", false), ("Z", false)]),
-        ("freeze_account", vec![("A", true), ("M", false), ("H", false), ("S", false), ("T", false), ("Z", false)]),
-        ("unfreeze_account", vec![("A", true), ("M", false), ("H", false), ("S", false), ("T", false), ("Z", false)]),
-        ("clawback", vec![("A", true), ("M", false), ("H", false), ("S", false), ("T", false), ("Z", false)]),
-        ("set_role_admin", vec![("A", true), ("M", false), ("H", false), ("S", false), ("T", false), ("Z", false)]),
-        ("grant_role", vec![("A", true), ("M", false), ("H", false), ("S", false), ("T", false), ("Z", false)]),
-        ("revoke_role", vec![("A", true), ("M", false), ("H", false), ("S", false), ("T", false), ("Z", false)]),
+        (
+            "initialize",
+            vec![
+                ("A", true),
+                ("M", false),
+                ("H", false),
+                ("S", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "transfer",
+            vec![
+                ("A", false),
+                ("M", false),
+                ("H", true),
+                ("S", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "approve",
+            vec![
+                ("A", false),
+                ("M", false),
+                ("H", true),
+                ("S", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "transfer_from",
+            vec![
+                ("A", false),
+                ("M", false),
+                ("H", false),
+                ("S", true),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "burn",
+            vec![
+                ("A", false),
+                ("M", false),
+                ("H", true),
+                ("S", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "burn_from",
+            vec![
+                ("A", false),
+                ("M", false),
+                ("H", false),
+                ("S", true),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "mint",
+            vec![
+                ("A", true),
+                ("M", true),
+                ("H", false),
+                ("S", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "set_transfer_locked",
+            vec![
+                ("A", true),
+                ("M", true),
+                ("H", false),
+                ("S", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "set_minter",
+            vec![
+                ("A", true),
+                ("M", false),
+                ("H", false),
+                ("S", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "set_paused",
+            vec![
+                ("A", true),
+                ("M", false),
+                ("H", false),
+                ("S", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "set_fee_bps",
+            vec![
+                ("A", true),
+                ("M", false),
+                ("H", false),
+                ("S", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "set_transfer_restriction",
+            vec![
+                ("A", true),
+                ("M", false),
+                ("H", false),
+                ("S", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "freeze_account",
+            vec![
+                ("A", true),
+                ("M", false),
+                ("H", false),
+                ("S", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "unfreeze_account",
+            vec![
+                ("A", true),
+                ("M", false),
+                ("H", false),
+                ("S", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "clawback",
+            vec![
+                ("A", true),
+                ("M", false),
+                ("H", false),
+                ("S", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "set_role_admin",
+            vec![
+                ("A", true),
+                ("M", false),
+                ("H", false),
+                ("S", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "grant_role",
+            vec![
+                ("A", true),
+                ("M", false),
+                ("H", false),
+                ("S", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
+        (
+            "revoke_role",
+            vec![
+                ("A", true),
+                ("M", false),
+                ("H", false),
+                ("S", false),
+                ("T", false),
+                ("Z", false),
+            ],
+        ),
         // View functions (all roles can call)
-        ("name", vec![("A", true), ("M", true), ("H", true), ("S", true), ("T", true), ("Z", true)]),
-        ("symbol", vec![("A", true), ("M", true), ("H", true), ("S", true), ("T", true), ("Z", true)]),
-        ("decimals", vec![("A", true), ("M", true), ("H", true), ("S", true), ("T", true), ("Z", true)]),
-        ("total_supply", vec![("A", true), ("M", true), ("H", true), ("S", true), ("T", true), ("Z", true)]),
-        ("balance", vec![("A", true), ("M", true), ("H", true), ("S", true), ("T", true), ("Z", false)]), // Z rejected
-        ("allowance", vec![("A", true), ("M", true), ("H", true), ("S", true), ("T", true), ("Z", false)]),
-        ("get_nonce", vec![("A", true), ("M", true), ("H", true), ("S", true), ("T", true), ("Z", false)]),
-        ("invoice_id", vec![("A", true), ("M", true), ("H", true), ("S", true), ("T", true), ("Z", true)]),
-        ("transfer_locked", vec![("A", true), ("M", true), ("H", true), ("S", true), ("T", true), ("Z", true)]),
-        ("paused", vec![("A", true), ("M", true), ("H", true), ("S", true), ("T", true), ("Z", true)]),
-        ("is_account_frozen", vec![("A", true), ("M", true), ("H", true), ("S", true), ("T", true), ("Z", false)]),
-        ("get_fee_bps", vec![("A", true), ("M", true), ("H", true), ("S", true), ("T", true), ("Z", true)]),
-        ("get_role_admin", vec![("A", true), ("M", true), ("H", true), ("S", true), ("T", true), ("Z", false)]),
-        ("has_role", vec![("A", true), ("M", true), ("H", true), ("S", true), ("T", true), ("Z", false)]),
-        ("get_token_history", vec![("A", true), ("M", true), ("H", true), ("S", true), ("T", true), ("Z", false)]),
+        (
+            "name",
+            vec![
+                ("A", true),
+                ("M", true),
+                ("H", true),
+                ("S", true),
+                ("T", true),
+                ("Z", true),
+            ],
+        ),
+        (
+            "symbol",
+            vec![
+                ("A", true),
+                ("M", true),
+                ("H", true),
+                ("S", true),
+                ("T", true),
+                ("Z", true),
+            ],
+        ),
+        (
+            "decimals",
+            vec![
+                ("A", true),
+                ("M", true),
+                ("H", true),
+                ("S", true),
+                ("T", true),
+                ("Z", true),
+            ],
+        ),
+        (
+            "total_supply",
+            vec![
+                ("A", true),
+                ("M", true),
+                ("H", true),
+                ("S", true),
+                ("T", true),
+                ("Z", true),
+            ],
+        ),
+        (
+            "balance",
+            vec![
+                ("A", true),
+                ("M", true),
+                ("H", true),
+                ("S", true),
+                ("T", true),
+                ("Z", false),
+            ],
+        ), // Z rejected
+        (
+            "allowance",
+            vec![
+                ("A", true),
+                ("M", true),
+                ("H", true),
+                ("S", true),
+                ("T", true),
+                ("Z", false),
+            ],
+        ),
+        (
+            "get_nonce",
+            vec![
+                ("A", true),
+                ("M", true),
+                ("H", true),
+                ("S", true),
+                ("T", true),
+                ("Z", false),
+            ],
+        ),
+        (
+            "invoice_id",
+            vec![
+                ("A", true),
+                ("M", true),
+                ("H", true),
+                ("S", true),
+                ("T", true),
+                ("Z", true),
+            ],
+        ),
+        (
+            "transfer_locked",
+            vec![
+                ("A", true),
+                ("M", true),
+                ("H", true),
+                ("S", true),
+                ("T", true),
+                ("Z", true),
+            ],
+        ),
+        (
+            "paused",
+            vec![
+                ("A", true),
+                ("M", true),
+                ("H", true),
+                ("S", true),
+                ("T", true),
+                ("Z", true),
+            ],
+        ),
+        (
+            "is_account_frozen",
+            vec![
+                ("A", true),
+                ("M", true),
+                ("H", true),
+                ("S", true),
+                ("T", true),
+                ("Z", false),
+            ],
+        ),
+        (
+            "get_fee_bps",
+            vec![
+                ("A", true),
+                ("M", true),
+                ("H", true),
+                ("S", true),
+                ("T", true),
+                ("Z", true),
+            ],
+        ),
+        (
+            "get_role_admin",
+            vec![
+                ("A", true),
+                ("M", true),
+                ("H", true),
+                ("S", true),
+                ("T", true),
+                ("Z", false),
+            ],
+        ),
+        (
+            "has_role",
+            vec![
+                ("A", true),
+                ("M", true),
+                ("H", true),
+                ("S", true),
+                ("T", true),
+                ("Z", false),
+            ],
+        ),
+        (
+            "get_token_history",
+            vec![
+                ("A", true),
+                ("M", true),
+                ("H", true),
+                ("S", true),
+                ("T", true),
+                ("Z", false),
+            ],
+        ),
     ];
 
     for (method, roles) in matrix {
@@ -639,5 +1220,9 @@ fn auth_token_comprehensive_matrix() {
         }
     }
 
-    assert_eq!(matrix.len(), 30, "Authorization matrix should cover all 30 entrypoints");
+    assert_eq!(
+        matrix.len(),
+        30,
+        "Authorization matrix should cover all 30 entrypoints"
+    );
 }

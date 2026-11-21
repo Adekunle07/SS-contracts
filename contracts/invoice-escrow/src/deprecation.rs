@@ -4,7 +4,7 @@
 //! Each deprecated method is annotated with its replacement, the version
 //! it was deprecated in, and the target removal version.
 
-use soroban_sdk::{contracttype, String, Symbol, Vec, Env};
+use soroban_sdk::{contracttype, Env, String, Symbol, Vec};
 
 /// Deprecation status for a public entrypoint.
 #[contracttype]
@@ -74,10 +74,7 @@ pub fn create_escrow_with_tokens_record(env: &Env) -> DeprecationRecord {
         deprecated_since: String::from_str(env, "1.2.0"),
         removal_target: String::from_str(env, "2.0.0"),
         replacement: Symbol::new(env, "create_escrow"),
-        guidance: String::from_str(
-            env,
-            "Alias for create_escrow; use create_escrow directly",
-        ),
+        guidance: String::from_str(env, "Alias for create_escrow; use create_escrow directly"),
         min_warning_days: 90,
     }
 }
@@ -89,10 +86,7 @@ pub fn fund_escrow_with_token_record(env: &Env) -> DeprecationRecord {
         deprecated_since: String::from_str(env, "1.2.0"),
         removal_target: String::from_str(env, "2.0.0"),
         replacement: Symbol::new(env, "fund_escrow"),
-        guidance: String::from_str(
-            env,
-            "Alias for fund_escrow; use fund_escrow directly",
-        ),
+        guidance: String::from_str(env, "Alias for fund_escrow; use fund_escrow directly"),
         min_warning_days: 90,
     }
 }

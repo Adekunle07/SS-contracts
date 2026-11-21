@@ -72,10 +72,13 @@ fn extract_topic_names(env: &Env, event: &soroban_sdk::xdr::ContractEvent) -> Ve
 }
 
 /// Extract data field names and types from event
-fn extract_data_schema(env: &Env, event: &soroban_sdk::xdr::ContractEvent) -> Vec<(String, String)> {
+fn extract_data_schema(
+    env: &Env,
+    event: &soroban_sdk::xdr::ContractEvent,
+) -> Vec<(String, String)> {
     let (_, data) = parse_event(env, event);
     let mut fields = Vec::new(env);
-    
+
     // Try to decode as tuple/struct
     if let Ok(vec) = Vec::<Val>::try_from_val(env, &data) {
         for (i, val) in vec.iter().enumerate() {
@@ -143,7 +146,7 @@ fn event_schema_snapshot_escrow_created() {
 
     // Get the emitted events
     let events = env.events().all();
-    
+
     // Find escrow_created event
     let mut found = false;
     for event in events.iter() {
@@ -152,27 +155,61 @@ fn event_schema_snapshot_escrow_created() {
             if let Ok(sym) = Symbol::try_from_val(&env, &topics.get(1).unwrap()) {
                 if sym == Symbol::new(&env, "escrow_created") {
                     found = true;
-                    
+
                     // Verify topic structure: [contract, "escrow_created", invoice_id]
-                    assert!(topics.len() >= 3, "escrow_created should have at least 3 topics");
-                    
+                    assert!(
+                        topics.len() >= 3,
+                        "escrow_created should have at least 3 topics"
+                    );
+
                     // Verify data structure: (invoice_id, seller, debtor, face_value, purchase_price, due_dt, token, inv_token, commitment, funding_milestone)
                     let (_, data) = parse_event(&env, &event);
                     let data_vec = Vec::<Val>::try_from_val(&env, &data).unwrap();
-                    assert_eq!(data_vec.len(), 10, "escrow_created data should have 10 fields");
-                    
+                    assert_eq!(
+                        data_vec.len(),
+                        10,
+                        "escrow_created data should have 10 fields"
+                    );
+
                     // Verify field types in order
-                    assert_eq!(data_vec.get(0).unwrap().type_of(), soroban_sdk::xdr::ScValType::Symbol);
-                    assert_eq!(data_vec.get(1).unwrap().type_of(), soroban_sdk::xdr::ScValType::Address);
-                    assert_eq!(data_vec.get(2).unwrap().type_of(), soroban_sdk::xdr::ScValType::Address);
-                    assert_eq!(data_vec.get(3).unwrap().type_of(), soroban_sdk::xdr::ScValType::I128);
-                    assert_eq!(data_vec.get(4).unwrap().type_of(), soroban_sdk::xdr::ScValType::I128);
-                    assert_eq!(data_vec.get(5).unwrap().type_of(), soroban_sdk::xdr::ScValType::U64);
-                    assert_eq!(data_vec.get(6).unwrap().type_of(), soroban_sdk::xdr::ScValType::Address);
-                    assert_eq!(data_vec.get(7).unwrap().type_of(), soroban_sdk::xdr::ScValType::Address);
-                    assert_eq!(data_vec.get(8).unwrap().type_of(), soroban_sdk::xdr::ScValType::BytesN);
+                    assert_eq!(
+                        data_vec.get(0).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::Symbol
+                    );
+                    assert_eq!(
+                        data_vec.get(1).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::Address
+                    );
+                    assert_eq!(
+                        data_vec.get(2).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::Address
+                    );
+                    assert_eq!(
+                        data_vec.get(3).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::I128
+                    );
+                    assert_eq!(
+                        data_vec.get(4).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::I128
+                    );
+                    assert_eq!(
+                        data_vec.get(5).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::U64
+                    );
+                    assert_eq!(
+                        data_vec.get(6).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::Address
+                    );
+                    assert_eq!(
+                        data_vec.get(7).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::Address
+                    );
+                    assert_eq!(
+                        data_vec.get(8).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::BytesN
+                    );
                     // funding_milestone is Option<i128>
-                    
+
                     break;
                 }
             }
@@ -233,21 +270,39 @@ fn event_schema_snapshot_escrow_funded() {
             if let Ok(sym) = Symbol::try_from_val(&env, &topics.get(1).unwrap()) {
                 if sym == Symbol::new(&env, "escrow_funded") {
                     found = true;
-                    
+
                     // Verify topic structure: [contract, "escrow_funded", invoice_id]
-                    assert!(topics.len() >= 3, "escrow_funded should have at least 3 topics");
-                    
+                    assert!(
+                        topics.len() >= 3,
+                        "escrow_funded should have at least 3 topics"
+                    );
+
                     // Verify data: (invoice_id, funder, amount, funded_amt, purchase_price)
                     let (_, data) = parse_event(&env, &event);
                     let data_vec = Vec::<Val>::try_from_val(&env, &data).unwrap();
                     assert_eq!(data_vec.len(), 5, "escrow_funded data should have 5 fields");
-                    
-                    assert_eq!(data_vec.get(0).unwrap().type_of(), soroban_sdk::xdr::ScValType::Symbol);
-                    assert_eq!(data_vec.get(1).unwrap().type_of(), soroban_sdk::xdr::ScValType::Address);
-                    assert_eq!(data_vec.get(2).unwrap().type_of(), soroban_sdk::xdr::ScValType::I128);
-                    assert_eq!(data_vec.get(3).unwrap().type_of(), soroban_sdk::xdr::ScValType::I128);
-                    assert_eq!(data_vec.get(4).unwrap().type_of(), soroban_sdk::xdr::ScValType::I128);
-                    
+
+                    assert_eq!(
+                        data_vec.get(0).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::Symbol
+                    );
+                    assert_eq!(
+                        data_vec.get(1).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::Address
+                    );
+                    assert_eq!(
+                        data_vec.get(2).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::I128
+                    );
+                    assert_eq!(
+                        data_vec.get(3).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::I128
+                    );
+                    assert_eq!(
+                        data_vec.get(4).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::I128
+                    );
+
                     break;
                 }
             }
@@ -308,20 +363,39 @@ fn event_schema_snapshot_payment_settled() {
             if let Ok(sym) = Symbol::try_from_val(&env, &topics.get(1).unwrap()) {
                 if sym == Symbol::new(&env, "payment_settled") {
                     found = true;
-                    
+
                     // Verify topic structure: [contract, "payment_settled", invoice_id]
-                    assert!(topics.len() >= 3, "payment_settled should have at least 3 topics");
-                    
+                    assert!(
+                        topics.len() >= 3,
+                        "payment_settled should have at least 3 topics"
+                    );
+
                     // Verify data: (invoice_id, amount, platform_fee, investor_amount)
                     let (_, data) = parse_event(&env, &event);
                     let data_vec = Vec::<Val>::try_from_val(&env, &data).unwrap();
-                    assert_eq!(data_vec.len(), 4, "payment_settled data should have 4 fields");
-                    
-                    assert_eq!(data_vec.get(0).unwrap().type_of(), soroban_sdk::xdr::ScValType::Symbol);
-                    assert_eq!(data_vec.get(1).unwrap().type_of(), soroban_sdk::xdr::ScValType::I128);
-                    assert_eq!(data_vec.get(2).unwrap().type_of(), soroban_sdk::xdr::ScValType::I128);
-                    assert_eq!(data_vec.get(3).unwrap().type_of(), soroban_sdk::xdr::ScValType::I128);
-                    
+                    assert_eq!(
+                        data_vec.len(),
+                        4,
+                        "payment_settled data should have 4 fields"
+                    );
+
+                    assert_eq!(
+                        data_vec.get(0).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::Symbol
+                    );
+                    assert_eq!(
+                        data_vec.get(1).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::I128
+                    );
+                    assert_eq!(
+                        data_vec.get(2).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::I128
+                    );
+                    assert_eq!(
+                        data_vec.get(3).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::I128
+                    );
+
                     break;
                 }
             }
@@ -385,15 +459,25 @@ fn event_schema_snapshot_escrow_refunded() {
             if let Ok(sym) = Symbol::try_from_val(&env, &topics.get(1).unwrap()) {
                 if sym == Symbol::new(&env, "escrow_refunded") {
                     found = true;
-                    
+
                     // Verify data: (invoice_id, amount)
                     let (_, data) = parse_event(&env, &event);
                     let data_vec = Vec::<Val>::try_from_val(&env, &data).unwrap();
-                    assert_eq!(data_vec.len(), 2, "escrow_refunded data should have 2 fields");
-                    
-                    assert_eq!(data_vec.get(0).unwrap().type_of(), soroban_sdk::xdr::ScValType::Symbol);
-                    assert_eq!(data_vec.get(1).unwrap().type_of(), soroban_sdk::xdr::ScValType::I128);
-                    
+                    assert_eq!(
+                        data_vec.len(),
+                        2,
+                        "escrow_refunded data should have 2 fields"
+                    );
+
+                    assert_eq!(
+                        data_vec.get(0).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::Symbol
+                    );
+                    assert_eq!(
+                        data_vec.get(1).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::I128
+                    );
+
                     break;
                 }
             }
@@ -445,8 +529,14 @@ fn event_schema_snapshot_installment_events() {
     // Set installment schedule
     let schedule = soroban_sdk::vec![
         &env,
-        crate::types::InstallmentInput { due_ts: 500_000, amount: 1000 },
-        crate::types::InstallmentInput { due_ts: 800_000, amount: 1000 },
+        crate::types::InstallmentInput {
+            due_ts: 500_000,
+            amount: 1000
+        },
+        crate::types::InstallmentInput {
+            due_ts: 800_000,
+            amount: 1000
+        },
     ];
     client.set_installment_schedule(&invoice_id, &seller, &schedule);
 
@@ -466,22 +556,48 @@ fn event_schema_snapshot_installment_events() {
                     found_installment_set = true;
                     let (_, data) = parse_event(&env, &event);
                     let data_vec = Vec::<Val>::try_from_val(&env, &data).unwrap();
-                    assert_eq!(data_vec.len(), 4, "installment_schedule_set data should have 4 fields");
+                    assert_eq!(
+                        data_vec.len(),
+                        4,
+                        "installment_schedule_set data should have 4 fields"
+                    );
                 } else if sym == Symbol::new(&env, "installment_settled") {
                     found_installment_settled = true;
                     let (_, data) = parse_event(&env, &event);
                     let data_vec = Vec::<Val>::try_from_val(&env, &data).unwrap();
-                    assert_eq!(data_vec.len(), 4, "installment_settled data should have 4 fields");
-                    assert_eq!(data_vec.get(0).unwrap().type_of(), soroban_sdk::xdr::ScValType::Symbol);
-                    assert_eq!(data_vec.get(1).unwrap().type_of(), soroban_sdk::xdr::ScValType::U32);
-                    assert_eq!(data_vec.get(2).unwrap().type_of(), soroban_sdk::xdr::ScValType::I128);
-                    assert_eq!(data_vec.get(3).unwrap().type_of(), soroban_sdk::xdr::ScValType::I128);
+                    assert_eq!(
+                        data_vec.len(),
+                        4,
+                        "installment_settled data should have 4 fields"
+                    );
+                    assert_eq!(
+                        data_vec.get(0).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::Symbol
+                    );
+                    assert_eq!(
+                        data_vec.get(1).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::U32
+                    );
+                    assert_eq!(
+                        data_vec.get(2).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::I128
+                    );
+                    assert_eq!(
+                        data_vec.get(3).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::I128
+                    );
                 }
             }
         }
     }
-    assert!(found_installment_set, "installment_schedule_set event not found");
-    assert!(found_installment_settled, "installment_settled event not found");
+    assert!(
+        found_installment_set,
+        "installment_schedule_set event not found"
+    );
+    assert!(
+        found_installment_settled,
+        "installment_settled event not found"
+    );
 }
 
 #[test]
@@ -538,9 +654,18 @@ fn event_schema_snapshot_dispute_events() {
                     let (_, data) = parse_event(&env, &event);
                     let data_vec = Vec::<Val>::try_from_val(&env, &data).unwrap();
                     assert_eq!(data_vec.len(), 3, "DisputeRaised data should have 3 fields");
-                    assert_eq!(data_vec.get(0).unwrap().type_of(), soroban_sdk::xdr::ScValType::Symbol);
-                    assert_eq!(data_vec.get(1).unwrap().type_of(), soroban_sdk::xdr::ScValType::Address);
-                    assert_eq!(data_vec.get(2).unwrap().type_of(), soroban_sdk::xdr::ScValType::U64);
+                    assert_eq!(
+                        data_vec.get(0).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::Symbol
+                    );
+                    assert_eq!(
+                        data_vec.get(1).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::Address
+                    );
+                    assert_eq!(
+                        data_vec.get(2).unwrap().type_of(),
+                        soroban_sdk::xdr::ScValType::U64
+                    );
                 }
             }
         }

@@ -35,8 +35,18 @@ impl LedgerSnapshot {
     }
 
     pub fn assert_unchanged(&self, env: &Env, context: &str) {
-        assert_eq!(env.ledger().timestamp(), self.timestamp, "{} - timestamp changed", context);
-        assert_eq!(env.ledger().sequence(), self.sequence, "{} - sequence changed", context);
+        assert_eq!(
+            env.ledger().timestamp(),
+            self.timestamp,
+            "{} - timestamp changed",
+            context
+        );
+        assert_eq!(
+            env.ledger().sequence(),
+            self.sequence,
+            "{} - sequence changed",
+            context
+        );
     }
 }
 
@@ -61,13 +71,23 @@ impl BalanceSnapshot {
     pub fn assert_unchanged(&self, env: &Env, context: &str) {
         let client = soroban_sdk::token::Client::new(env, &self.token);
         let current = client.balance(&self.holder);
-        assert_eq!(current, self.balance, "{} - balance changed for {}", context, self.holder);
+        assert_eq!(
+            current, self.balance,
+            "{} - balance changed for {}",
+            context, self.holder
+        );
     }
 
     pub fn assert_delta(&self, env: &Env, expected_delta: i128, context: &str) {
         let client = soroban_sdk::token::Client::new(env, &self.token);
         let current = client.balance(&self.holder);
-        assert_eq!(current, self.balance + expected_delta, "{} - unexpected balance delta for {}", context, self.holder);
+        assert_eq!(
+            current,
+            self.balance + expected_delta,
+            "{} - unexpected balance delta for {}",
+            context,
+            self.holder
+        );
     }
 }
 
@@ -80,19 +100,19 @@ pub struct IntegrationTestEnv {
     pub buyer: Address,
     pub fee_recipient: Address,
     pub invoice_id: Symbol,
-    
+
     pub escrow_id: Address,
     pub escrow_client: InvoiceEscrowClient<'static>,
-    
+
     pub distributor_id: Address,
     pub distributor_client: PaymentDistributorClient<'static>,
-    
+
     pub inv_token_id: Address,
     pub inv_token_client: InvoiceTokenClient<'static>,
-    
+
     pub payment_token: Address,
     pub payment_asset: soroban_sdk::token::StellarAssetClient<'static>,
-    
+
     pub face_value: i128,
     pub purchase_price: i128,
 }
@@ -175,8 +195,16 @@ impl IntegrationTestEnv {
             seller: BalanceSnapshot::capture(&self.env, &self.payment_token, &self.seller),
             debtor: BalanceSnapshot::capture(&self.env, &self.payment_token, &self.debtor),
             buyer: BalanceSnapshot::capture(&self.env, &self.payment_token, &self.buyer),
-            fee_recipient: BalanceSnapshot::capture(&self.env, &self.payment_token, &self.fee_recipient),
-            distributor: BalanceSnapshot::capture(&self.env, &self.payment_token, &self.distributor_id),
+            fee_recipient: BalanceSnapshot::capture(
+                &self.env,
+                &self.payment_token,
+                &self.fee_recipient,
+            ),
+            distributor: BalanceSnapshot::capture(
+                &self.env,
+                &self.payment_token,
+                &self.distributor_id,
+            ),
             escrow: BalanceSnapshot::capture(&self.env, &self.payment_token, &self.escrow_id),
             admin: BalanceSnapshot::capture(&self.env, &self.payment_token, &self.admin),
         }
@@ -201,12 +229,14 @@ impl IntegrationTestEnv {
 
     /// Fund escrow
     pub fn fund_escrow(&self, amount: i128) -> Result<(), Error> {
-        self.escrow_client.fund_escrow_legacy(&self.invoice_id, &self.buyer, &amount)
+        self.escrow_client
+            .fund_escrow_legacy(&self.invoice_id, &self.buyer, &amount)
     }
 
     /// Record payment (full or partial)
     pub fn record_payment(&self, amount: i128) -> Result<(), Error> {
-        self.escrow_client.record_payment(&self.invoice_id, &self.debtor, &amount)
+        self.escrow_client
+            .record_payment(&self.invoice_id, &self.debtor, &amount)
     }
 
     /// Refund escrow
@@ -270,8 +300,10 @@ impl IntegrationBalances {
         self.seller.assert_delta(env, deltas.seller, context);
         self.debtor.assert_delta(env, deltas.debtor, context);
         self.buyer.assert_delta(env, deltas.buyer, context);
-        self.fee_recipient.assert_delta(env, deltas.fee_recipient, context);
-        self.distributor.assert_delta(env, deltas.distributor, context);
+        self.fee_recipient
+            .assert_delta(env, deltas.fee_recipient, context);
+        self.distributor
+            .assert_delta(env, deltas.distributor, context);
         self.escrow.assert_delta(env, deltas.escrow, context);
         self.admin.assert_delta(env, deltas.admin, context);
     }
@@ -320,8 +352,10 @@ fn integration_happy_path_create_fund_settle() {
     let events = env.events().all();
     assert!(events.iter().any(|e| {
         let (topics, _) = parse_event(env, e);
-        topics.len() >= 2 && 
-        Symbol::try_from_val(env, &topics.get(1).unwrap()).map(|s| s == Symbol::new(env, "escrow_created")).unwrap_or(false)
+        topics.len() >= 2
+            && Symbol::try_from_val(env, &topics.get(1).unwrap())
+                .map(|s| s == Symbol::new(env, "escrow_created"))
+                .unwrap_or(false)
     }));
 
     // 2. Fund escrow
@@ -332,13 +366,18 @@ fn integration_happy_path_create_fund_settle() {
     let events = env.events().all();
     assert!(events.iter().any(|e| {
         let (topics, _) = parse_event(env, e);
-        topics.len() >= 2 && 
-        Symbol::try_from_val(env, &topics.get(1).unwrap()).map(|s| s == Symbol::new(env, "escrow_funded")).unwrap_or(false)
+        topics.len() >= 2
+            && Symbol::try_from_val(env, &topics.get(1).unwrap())
+                .map(|s| s == Symbol::new(env, "escrow_funded"))
+                .unwrap_or(false)
     }));
 
     // Verify invoice tokens minted to buyer
     let buyer_inv_balance = test_env.get_inv_token_balance(&test_env.buyer);
-    assert_eq!(buyer_inv_balance, 9000, "Buyer should have 9000 invoice tokens");
+    assert_eq!(
+        buyer_inv_balance, 9000,
+        "Buyer should have 9000 invoice tokens"
+    );
 
     // 3. Record full payment (settle)
     test_env.record_payment(10000).unwrap();
@@ -348,15 +387,19 @@ fn integration_happy_path_create_fund_settle() {
     let events = env.events().all();
     assert!(events.iter().any(|e| {
         let (topics, _) = parse_event(env, e);
-        topics.len() >= 2 && 
-        Symbol::try_from_val(env, &topics.get(1).unwrap()).map(|s| s == Symbol::new(env, "payment_settled")).unwrap_or(false)
+        topics.len() >= 2
+            && Symbol::try_from_val(env, &topics.get(1).unwrap())
+                .map(|s| s == Symbol::new(env, "payment_settled"))
+                .unwrap_or(false)
     }));
 
     // Verify PaymentDistributed event from distributor
     assert!(events.iter().any(|e| {
         let (topics, _) = parse_event(env, e);
-        topics.len() >= 2 && 
-        Symbol::try_from_val(env, &topics.get(1).unwrap()).map(|s| s == Symbol::new(env, "PaymentDistributed")).unwrap_or(false)
+        topics.len() >= 2
+            && Symbol::try_from_val(env, &topics.get(1).unwrap())
+                .map(|s| s == Symbol::new(env, "PaymentDistributed"))
+                .unwrap_or(false)
     }));
 
     // 4. Verify final balances
@@ -364,7 +407,7 @@ fn integration_happy_path_create_fund_settle() {
     // Buyer (investor) receives purchase_price - platform_fee = 9000 - 270 = 8730
     // Fee recipient receives platform_fee = 10000 * 300 / 10000 = 300
     // Debtor pays face_value = 10000
-    
+
     let expected_deltas = BalanceDeltas {
         seller: 10000,
         debtor: -10000,
@@ -374,12 +417,15 @@ fn integration_happy_path_create_fund_settle() {
         escrow: 0,
         admin: 0,
     };
-    
+
     initial_balances.assert_deltas(env, expected_deltas, "Final balances after full settlement");
 
     // Verify invoice token transfers unlocked
     let transfer_locked = test_env.inv_token_client.transfer_locked().unwrap();
-    assert!(!transfer_locked, "Invoice token transfers should be unlocked after settlement");
+    assert!(
+        !transfer_locked,
+        "Invoice token transfers should be unlocked after settlement"
+    );
 }
 
 /// Test partial payment then full settlement
@@ -402,7 +448,7 @@ fn integration_partial_payment_then_full_settlement() {
     // Investor receives 4000 * (9000/10000) - fee = 3600 - 108 = 3492
     // Fee recipient receives 4000 * 300/10000 = 120
     // Debtor pays 4000
-    
+
     let partial_deltas = BalanceDeltas {
         seller: 4000,
         debtor: -4000,
@@ -412,7 +458,7 @@ fn integration_partial_payment_then_full_settlement() {
         escrow: 0,
         admin: 0,
     };
-    
+
     initial_balances.assert_deltas(env, partial_deltas, "Balances after partial payment");
 
     // Remaining payment: 6000
@@ -425,7 +471,7 @@ fn integration_partial_payment_then_full_settlement() {
     // Investor receives 6000 * 9000/10000 = 5400, minus 3% fee = 5238
     // Fee recipient receives 6000 * 300/10000 = 180
     // Debtor pays 6000
-    
+
     let final_deltas = BalanceDeltas {
         seller: 6000,
         debtor: -6000,
@@ -435,7 +481,7 @@ fn integration_partial_payment_then_full_settlement() {
         escrow: 0,
         admin: 0,
     };
-    
+
     mid_balances.assert_deltas(env, final_deltas, "Balances after final payment");
 
     // Total from initial
@@ -448,7 +494,7 @@ fn integration_partial_payment_then_full_settlement() {
         escrow: 0,
         admin: 0,
     };
-    
+
     initial_balances.assert_deltas(env, total_deltas, "Total balances after full settlement");
 }
 
@@ -468,21 +514,28 @@ fn integration_refund_flow() {
 
     // Refund
     test_env.refund_escrow().unwrap();
-    assert_eq!(test_env.get_escrow_status().unwrap(), EscrowStatus::Refunded);
+    assert_eq!(
+        test_env.get_escrow_status().unwrap(),
+        EscrowStatus::Refunded
+    );
 
     // Verify escrow_refunded event
     let events = env.events().all();
     assert!(events.iter().any(|e| {
         let (topics, _) = parse_event(env, e);
-        topics.len() >= 2 && 
-        Symbol::try_from_val(env, &topics.get(1).unwrap()).map(|s| s == Symbol::new(env, "escrow_refunded")).unwrap_or(false)
+        topics.len() >= 2
+            && Symbol::try_from_val(env, &topics.get(1).unwrap())
+                .map(|s| s == Symbol::new(env, "escrow_refunded"))
+                .unwrap_or(false)
     }));
 
     // Verify refund_distributed event from distributor
     assert!(events.iter().any(|e| {
         let (topics, _) = parse_event(env, e);
-        topics.len() >= 2 && 
-        Symbol::try_from_val(env, &topics.get(1).unwrap()).map(|s| s == Symbol::new(env, "refund_distributed")).unwrap_or(false)
+        topics.len() >= 2
+            && Symbol::try_from_val(env, &topics.get(1).unwrap())
+                .map(|s| s == Symbol::new(env, "refund_distributed"))
+                .unwrap_or(false)
     }));
 
     // Verify balances: buyer gets full purchase_price back (9000)
@@ -496,12 +549,15 @@ fn integration_refund_flow() {
         escrow: 0,
         admin: 0,
     };
-    
+
     initial_balances.assert_deltas(env, expected_deltas, "Balances after refund");
 
     // Verify invoice tokens burned or transfer still locked
     let buyer_inv_balance = test_env.get_inv_token_balance(&test_env.buyer);
-    assert_eq!(buyer_inv_balance, 0, "Buyer invoice tokens should be burned after refund");
+    assert_eq!(
+        buyer_inv_balance, 0,
+        "Buyer invoice tokens should be burned after refund"
+    );
 }
 
 /// Test installment schedule with partial settlements
@@ -518,36 +574,52 @@ fn integration_installment_schedule() {
     // Set installment schedule: 2 installments of 5000 each
     let schedule = soroban_sdk::vec![
         env,
-        InstallmentInput { due_ts: 500_000, amount: 5000 },
-        InstallmentInput { due_ts: 800_000, amount: 5000 },
+        InstallmentInput {
+            due_ts: 500_000,
+            amount: 5000
+        },
+        InstallmentInput {
+            due_ts: 800_000,
+            amount: 5000
+        },
     ];
-    test_env.escrow_client.set_installment_schedule(&test_env.invoice_id, &test_env.seller, &schedule).unwrap();
+    test_env
+        .escrow_client
+        .set_installment_schedule(&test_env.invoice_id, &test_env.seller, &schedule)
+        .unwrap();
 
     // First installment payment
     test_env.record_payment(5000).unwrap();
-    
+
     // Verify installment_settled event
     let events = env.events().all();
     assert!(events.iter().any(|e| {
         let (topics, _) = parse_event(env, e);
-        topics.len() >= 2 && 
-        Symbol::try_from_val(env, &topics.get(1).unwrap()).map(|s| s == Symbol::new(env, "installment_settled")).unwrap_or(false)
+        topics.len() >= 2
+            && Symbol::try_from_val(env, &topics.get(1).unwrap())
+                .map(|s| s == Symbol::new(env, "installment_settled"))
+                .unwrap_or(false)
     }));
 
     // Check balances after first installment
     let mid_balances = test_env.capture_balances();
-    
+
     // Second installment payment
     test_env.record_payment(5000).unwrap();
     assert_eq!(test_env.get_escrow_status().unwrap(), EscrowStatus::Settled);
 
     // Verify second installment_settled
     let events = env.events().all();
-    let installment_count = events.iter().filter(|e| {
-        let (topics, _) = parse_event(env, e);
-        topics.len() >= 2 && 
-        Symbol::try_from_val(env, &topics.get(1).unwrap()).map(|s| s == Symbol::new(env, "installment_settled")).unwrap_or(false)
-    }).count();
+    let installment_count = events
+        .iter()
+        .filter(|e| {
+            let (topics, _) = parse_event(env, e);
+            topics.len() >= 2
+                && Symbol::try_from_val(env, &topics.get(1).unwrap())
+                    .map(|s| s == Symbol::new(env, "installment_settled"))
+                    .unwrap_or(false)
+        })
+        .count();
     assert_eq!(installment_count, 2, "Both installments should be settled");
 
     // Verify final balances
@@ -560,8 +632,12 @@ fn integration_installment_schedule() {
         escrow: 0,
         admin: 0,
     };
-    
-    initial_balances.assert_deltas(env, expected_deltas, "Balances after installment settlement");
+
+    initial_balances.assert_deltas(
+        env,
+        expected_deltas,
+        "Balances after installment settlement",
+    );
 }
 
 /// Test early settlement discount
@@ -577,7 +653,10 @@ fn integration_early_settlement_discount() {
 
     // Set early settlement discount: 5% discount if paid before cutoff
     let cutoff = env.ledger().timestamp() + 1000; // 1000 seconds from now
-    test_env.escrow_client.set_early_settlement(&test_env.invoice_id, &test_env.seller, &500, &cutoff).unwrap();
+    test_env
+        .escrow_client
+        .set_early_settlement(&test_env.invoice_id, &test_env.seller, &500, &cutoff)
+        .unwrap();
 
     // Record payment before cutoff (early)
     test_env.record_payment(10000).unwrap();
@@ -587,8 +666,10 @@ fn integration_early_settlement_discount() {
     let events = env.events().all();
     assert!(events.iter().any(|e| {
         let (topics, _) = parse_event(env, e);
-        topics.len() >= 2 && 
-        Symbol::try_from_val(env, &topics.get(1).unwrap()).map(|s| s == Symbol::new(env, "early_settlement_applied")).unwrap_or(false)
+        topics.len() >= 2
+            && Symbol::try_from_val(env, &topics.get(1).unwrap())
+                .map(|s| s == Symbol::new(env, "early_settlement_applied"))
+                .unwrap_or(false)
     }));
 
     // With 5% discount on face_value: effective_face = 10000 * 9500/10000 = 9500
@@ -596,7 +677,7 @@ fn integration_early_settlement_discount() {
     // Investor receives 9000 - fee on 9500 = 9000 - 285 = 8715
     // Fee recipient receives 9500 * 300/10000 = 285
     // Debtor pays 9500 (discounted)
-    
+
     let expected_deltas = BalanceDeltas {
         seller: 9500,
         debtor: -9500,
@@ -606,7 +687,7 @@ fn integration_early_settlement_discount() {
         escrow: 0,
         admin: 0,
     };
-    
+
     initial_balances.assert_deltas(env, expected_deltas, "Balances after early settlement");
 }
 
@@ -622,27 +703,47 @@ fn integration_dispute_flow() {
     test_env.fund_escrow(9000).unwrap();
 
     // Raise dispute
-    test_env.escrow_client.raise_dispute(&test_env.invoice_id, &test_env.buyer, &BytesN::from_array(env, &[1; 32])).unwrap();
-    assert_eq!(test_env.get_escrow_status().unwrap(), EscrowStatus::Disputed);
+    test_env
+        .escrow_client
+        .raise_dispute(
+            &test_env.invoice_id,
+            &test_env.buyer,
+            &BytesN::from_array(env, &[1; 32]),
+        )
+        .unwrap();
+    assert_eq!(
+        test_env.get_escrow_status().unwrap(),
+        EscrowStatus::Disputed
+    );
 
     // Verify DisputeRaised event
     let events = env.events().all();
     assert!(events.iter().any(|e| {
         let (topics, _) = parse_event(env, e);
-        topics.len() >= 2 && 
-        Symbol::try_from_val(env, &topics.get(1).unwrap()).map(|s| s == Symbol::new(env, "DisputeRaised")).unwrap_or(false)
+        topics.len() >= 2
+            && Symbol::try_from_val(env, &topics.get(1).unwrap())
+                .map(|s| s == Symbol::new(env, "DisputeRaised"))
+                .unwrap_or(false)
     }));
 
     // Resolve dispute in favor of refund
-    test_env.escrow_client.resolve_dispute(&test_env.invoice_id, &Symbol::new(env, "refund")).unwrap();
-    assert_eq!(test_env.get_escrow_status().unwrap(), EscrowStatus::Refunded);
+    test_env
+        .escrow_client
+        .resolve_dispute(&test_env.invoice_id, &Symbol::new(env, "refund"))
+        .unwrap();
+    assert_eq!(
+        test_env.get_escrow_status().unwrap(),
+        EscrowStatus::Refunded
+    );
 
     // Verify DisputeResolved event
     let events = env.events().all();
     assert!(events.iter().any(|e| {
         let (topics, _) = parse_event(env, e);
-        topics.len() >= 2 && 
-        Symbol::try_from_val(env, &topics.get(1).unwrap()).map(|s| s == Symbol::new(env, "DisputeResolved")).unwrap_or(false)
+        topics.len() >= 2
+            && Symbol::try_from_val(env, &topics.get(1).unwrap())
+                .map(|s| s == Symbol::new(env, "DisputeResolved"))
+                .unwrap_or(false)
     }));
 
     // Verify buyer gets refund
@@ -655,8 +756,12 @@ fn integration_dispute_flow() {
         escrow: 0,
         admin: 0,
     };
-    
-    initial_balances.assert_deltas(env, expected_deltas, "Balances after dispute resolution (refund)");
+
+    initial_balances.assert_deltas(
+        env,
+        expected_deltas,
+        "Balances after dispute resolution (refund)",
+    );
 }
 
 /// Test category-specific fee
@@ -671,30 +776,47 @@ fn integration_category_fee() {
     test_env.fund_escrow(9000).unwrap();
 
     // Set category fee: 5% for Factoring
-    test_env.escrow_client.set_category_fee(&test_env.admin, &test_env.admin, &InvoiceCategory::Factoring, &500).unwrap();
+    test_env
+        .escrow_client
+        .set_category_fee(
+            &test_env.admin,
+            &test_env.admin,
+            &InvoiceCategory::Factoring,
+            &500,
+        )
+        .unwrap();
 
     // Need to recreate escrow with Factoring category to test
     let invoice_id2 = Symbol::new(env, "INV_CAT");
     let payment_asset = test_env.payment_asset.clone();
     payment_asset.mint(&test_env.debtor, &10000);
 
-    test_env.escrow_client.create_escrow_legacy(
-        &invoice_id2,
-        &test_env.seller,
-        &test_env.debtor,
-        &10000,
-        &9000,
-        &1_000_000,
-        &test_env.payment_token,
-        &test_env.inv_token_id,
-        &BytesN::from_array(env, &[2; 32]),
-        &None,
-        &Some(InvoiceCategory::Factoring),
-    ).unwrap();
-    test_env.escrow_client.fund_escrow_legacy(&invoice_id2, &test_env.buyer, &9000).unwrap();
+    test_env
+        .escrow_client
+        .create_escrow_legacy(
+            &invoice_id2,
+            &test_env.seller,
+            &test_env.debtor,
+            &10000,
+            &9000,
+            &1_000_000,
+            &test_env.payment_token,
+            &test_env.inv_token_id,
+            &BytesN::from_array(env, &[2; 32]),
+            &None,
+            &Some(InvoiceCategory::Factoring),
+        )
+        .unwrap();
+    test_env
+        .escrow_client
+        .fund_escrow_legacy(&invoice_id2, &test_env.buyer, &9000)
+        .unwrap();
 
     let mid_balances = test_env.capture_balances();
-    test_env.escrow_client.record_payment(&invoice_id2, &test_env.debtor, &10000).unwrap();
+    test_env
+        .escrow_client
+        .record_payment(&invoice_id2, &test_env.debtor, &10000)
+        .unwrap();
 
     // Category fee 5% on payment amount (10000) = 500
     // Seller: 10000
@@ -707,7 +829,7 @@ fn integration_category_fee() {
     // Seller gets payment_amount = 10000
     // Fee recipient gets 500
     // Debtor pays 10000
-    
+
     let expected_deltas = BalanceDeltas {
         seller: 10000,
         debtor: -10000,
@@ -717,7 +839,7 @@ fn integration_category_fee() {
         escrow: 0,
         admin: 0,
     };
-    
+
     mid_balances.assert_deltas(env, expected_deltas, "Balances with category fee");
 }
 
@@ -733,7 +855,10 @@ fn integration_penalty_interest() {
     test_env.fund_escrow(9000).unwrap();
 
     // Set penalty interest: 10%
-    test_env.escrow_client.set_penalty_interest_bps(&test_env.admin, &test_env.admin, &1000).unwrap();
+    test_env
+        .escrow_client
+        .set_penalty_interest_bps(&test_env.admin, &test_env.admin, &1000)
+        .unwrap();
 
     // Advance time past due date but within grace period
     test_env.advance_time_past_due();
@@ -746,8 +871,10 @@ fn integration_penalty_interest() {
     let events = env.events().all();
     assert!(events.iter().any(|e| {
         let (topics, _) = parse_event(env, e);
-        topics.len() >= 2 && 
-        Symbol::try_from_val(env, &topics.get(1).unwrap()).map(|s| s == Symbol::new(env, "penalty_interest_charged")).unwrap_or(false)
+        topics.len() >= 2
+            && Symbol::try_from_val(env, &topics.get(1).unwrap())
+                .map(|s| s == Symbol::new(env, "penalty_interest_charged"))
+                .unwrap_or(false)
     }));
 
     // Penalty: 10% on investor_amount (9000) = 900
@@ -756,7 +883,7 @@ fn integration_penalty_interest() {
     // Seller gets: 10000
     // Fee recipient gets: 1200
     // Debtor pays: 10000
-    
+
     let expected_deltas = BalanceDeltas {
         seller: 10000,
         debtor: -10000,
@@ -766,7 +893,7 @@ fn integration_penalty_interest() {
         escrow: 0,
         admin: 0,
     };
-    
+
     initial_balances.assert_deltas(env, expected_deltas, "Balances with penalty interest");
 }
 
@@ -782,15 +909,23 @@ fn integration_cancel_before_funding() {
     assert_eq!(test_env.get_escrow_status().unwrap(), EscrowStatus::Created);
 
     // Cancel by seller
-    test_env.escrow_client.cancel_escrow(&test_env.invoice_id, &test_env.seller).unwrap();
-    assert_eq!(test_env.get_escrow_status().unwrap(), EscrowStatus::Cancelled);
+    test_env
+        .escrow_client
+        .cancel_escrow(&test_env.invoice_id, &test_env.seller)
+        .unwrap();
+    assert_eq!(
+        test_env.get_escrow_status().unwrap(),
+        EscrowStatus::Cancelled
+    );
 
     // Verify escrow_cancelled event
     let events = env.events().all();
     assert!(events.iter().any(|e| {
         let (topics, _) = parse_event(env, e);
-        topics.len() >= 2 && 
-        Symbol::try_from_val(env, &topics.get(1).unwrap()).map(|s| s == Symbol::new(env, "escrow_cancelled")).unwrap_or(false)
+        topics.len() >= 2
+            && Symbol::try_from_val(env, &topics.get(1).unwrap())
+                .map(|s| s == Symbol::new(env, "escrow_cancelled"))
+                .unwrap_or(false)
     }));
 
     // All balances unchanged
@@ -810,10 +945,16 @@ fn integration_multiple_investors() {
     // First investor funds 5000
     let buyer2 = Address::generate(env);
     test_env.payment_asset.mint(&buyer2, &5000);
-    test_env.escrow_client.fund_escrow_legacy(&test_env.invoice_id, &test_env.buyer, &5000).unwrap();
+    test_env
+        .escrow_client
+        .fund_escrow_legacy(&test_env.invoice_id, &test_env.buyer, &5000)
+        .unwrap();
 
     // Second investor funds remaining 4000
-    test_env.escrow_client.fund_escrow_legacy(&test_env.invoice_id, &buyer2, &4000).unwrap();
+    test_env
+        .escrow_client
+        .fund_escrow_legacy(&test_env.invoice_id, &buyer2, &4000)
+        .unwrap();
     assert_eq!(test_env.get_escrow_status().unwrap(), EscrowStatus::Funded);
 
     // Verify both have invoice tokens
