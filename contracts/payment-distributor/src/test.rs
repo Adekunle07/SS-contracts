@@ -1,3 +1,4 @@
+#![cfg(test)]
 #![allow(deprecated, unused_variables, dead_code, unused_mut, clippy::all)]
 
 use super::*;

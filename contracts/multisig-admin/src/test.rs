@@ -1,5 +1,6 @@
 //! Tests for the multi-sig admin contract (issue #524).
 
+#![cfg(test)]
 #![allow(deprecated)]
 
 use super::*;
