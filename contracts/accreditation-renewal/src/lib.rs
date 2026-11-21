@@ -102,7 +102,9 @@ impl AccreditationRenewalContract {
 
         for wallet in list.iter() {
             let expiry_key = DataKey::Expiry(wallet.clone());
-            if let Some(expiry_timestamp) = env.storage().persistent().get::<DataKey, u64>(&expiry_key) {
+            if let Some(expiry_timestamp) =
+                env.storage().persistent().get::<DataKey, u64>(&expiry_key)
+            {
                 if expiry_timestamp > now {
                     let days_remaining = (expiry_timestamp - now) / SECONDS_PER_DAY;
                     let log_key = DataKey::ReminderLog(wallet.clone());

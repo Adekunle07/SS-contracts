@@ -25,11 +25,7 @@ impl PortfolioNavSnapshotContract {
         Ok(())
     }
 
-    pub fn set_invoice_price(
-        env: Env,
-        invoice_id: BytesN<32>,
-        price: i128,
-    ) -> Result<(), Error> {
+    pub fn set_invoice_price(env: Env, invoice_id: BytesN<32>, price: i128) -> Result<(), Error> {
         let admin: Address = env
             .storage()
             .instance()
@@ -133,7 +129,10 @@ impl PortfolioNavSnapshotContract {
             let balance: i128 = env
                 .storage()
                 .persistent()
-                .get(&DataKey::FractionBalance(wallet.clone(), invoice_id.clone()))
+                .get(&DataKey::FractionBalance(
+                    wallet.clone(),
+                    invoice_id.clone(),
+                ))
                 .unwrap_or(0);
             let price: i128 = env
                 .storage()

@@ -262,7 +262,10 @@ pub fn funding_thresholds_set(
     max_threshold: i128,
 ) {
     env.events().publish(
-        (Symbol::new(env, "funding_thresholds_set"), invoice_id.clone()),
+        (
+            Symbol::new(env, "funding_thresholds_set"),
+            invoice_id.clone(),
+        ),
         (min_threshold, max_threshold),
     );
 }

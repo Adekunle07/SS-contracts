@@ -23,7 +23,7 @@ mod events;
 mod storage;
 mod types;
 
-use soroban_sdk::{contract, contractimpl, Address, Env, Symbol, U256, Vec};
+use soroban_sdk::{contract, contractimpl, Address, Env, Symbol, Vec, U256};
 
 pub use types::{ActionParams, ActionType, Config, Proposal, ProposalStatus};
 
@@ -119,9 +119,7 @@ impl MultisigAdmin {
             }
         }
 
-        let proposal_id = next_proposal_id
-            .checked_add(1)
-            .ok_or(Error::Overflow)?;
+        let proposal_id = next_proposal_id.checked_add(1).ok_or(Error::Overflow)?;
         storage::set_next_proposal_id(&env, proposal_id);
 
         let mut approvals = Vec::new(&env);

@@ -106,7 +106,10 @@ fn invest_normalises_amount_with_oracle_rate_and_stores_record() {
         .client
         .invest_with_currency(&f.invoice_id, &investor, &100_000, &eurc);
     assert_eq!(base, 108_000);
-    assert_eq!(f.client.get_investor_position(&f.invoice_id, &investor), 108_000);
+    assert_eq!(
+        f.client.get_investor_position(&f.invoice_id, &investor),
+        108_000
+    );
     assert_eq!(f.client.get_invoice(&f.invoice_id).total_raised, 108_000);
 
     // The investor paid in EURC, which the escrow now holds.
@@ -220,7 +223,8 @@ fn setters_are_admin_only() {
     let eurc = Symbol::new(&f.env, "EURC");
 
     assert_eq!(
-        f.client.try_set_supported_currency(&impostor, &eurc, &f.eurc),
+        f.client
+            .try_set_supported_currency(&impostor, &eurc, &f.eurc),
         Err(Ok(Error::Unauthorized))
     );
     assert_eq!(

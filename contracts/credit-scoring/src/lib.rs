@@ -84,11 +84,7 @@ impl CreditScoring {
 
     /// Admin-only: register a contract address as authorised to call
     /// `compute_credit_score`.
-    pub fn set_authorised_caller(
-        env: Env,
-        caller: Address,
-        authorised: bool,
-    ) -> Result<(), Error> {
+    pub fn set_authorised_caller(env: Env, caller: Address, authorised: bool) -> Result<(), Error> {
         let admin: Address = env
             .storage()
             .instance()

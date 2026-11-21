@@ -628,9 +628,12 @@ fn proposal_count_and_fields_track_created_proposals() {
     let ctx = setup(&env);
     assert_eq!(ctx.ms.proposal_count(), 0);
 
-    let proposal_id = ctx
-        .ms
-        .propose_action(&ctx.admin, &ActionType::FeeChange, &fee_params(200), &U256::from_u32(1));
+    let proposal_id = ctx.ms.propose_action(
+        &ctx.admin,
+        &ActionType::FeeChange,
+        &fee_params(200),
+        &U256::from_u32(1),
+    );
     assert_eq!(ctx.ms.proposal_count(), 1);
 
     let proposal = ctx.ms.get_proposal(&proposal_id);
@@ -646,9 +649,12 @@ fn proposal_count_and_fields_track_created_proposals() {
     assert_eq!(proposal.nonce, U256::from_u32(1));
 
     // Ids are sequential.
-    let second = ctx
-        .ms
-        .propose_action(&ctx.admin, &ActionType::Pause, &empty_params(), &U256::from_u32(2));
+    let second = ctx.ms.propose_action(
+        &ctx.admin,
+        &ActionType::Pause,
+        &empty_params(),
+        &U256::from_u32(2),
+    );
     assert_eq!(second, proposal_id + 1);
     assert_eq!(ctx.ms.proposal_count(), 2);
 }
@@ -662,9 +668,12 @@ fn nonce_starts_at_one_and_increments() {
 
     // First proposal for admin should require nonce = 1
     let nonce1 = U256::from_u32(1);
-    let id1 = ctx
-        .ms
-        .propose_action(&ctx.admin, &ActionType::FeeChange, &fee_params(100), &nonce1);
+    let id1 = ctx.ms.propose_action(
+        &ctx.admin,
+        &ActionType::FeeChange,
+        &fee_params(100),
+        &nonce1,
+    );
     assert_eq!(id1, 1);
     assert_eq!(ctx.ms.get_proposer_nonce(&ctx.admin), U256::from_u32(2));
 
@@ -691,14 +700,20 @@ fn stale_nonce_rejected() {
     let ctx = setup(&env);
 
     // Submit first proposal with nonce = 1
-    let _ = ctx
-        .ms
-        .propose_action(&ctx.admin, &ActionType::FeeChange, &fee_params(100), &U256::from_u32(1));
+    let _ = ctx.ms.propose_action(
+        &ctx.admin,
+        &ActionType::FeeChange,
+        &fee_params(100),
+        &U256::from_u32(1),
+    );
 
     // Try to replay with stale nonce = 1
-    let result = ctx
-        .ms
-        .try_propose_action(&ctx.admin, &ActionType::Pause, &empty_params(), &U256::from_u32(1));
+    let result = ctx.ms.try_propose_action(
+        &ctx.admin,
+        &ActionType::Pause,
+        &empty_params(),
+        &U256::from_u32(1),
+    );
     assert_eq!(result, Err(Ok(Error::NonceStale)));
 }
 
@@ -708,9 +723,12 @@ fn future_nonce_rejected() {
     let ctx = setup(&env);
 
     // Try to submit with future nonce = 2 (expected is 1)
-    let result = ctx
-        .ms
-        .try_propose_action(&ctx.admin, &ActionType::FeeChange, &fee_params(100), &U256::from_u32(2));
+    let result = ctx.ms.try_propose_action(
+        &ctx.admin,
+        &ActionType::FeeChange,
+        &fee_params(100),
+        &U256::from_u32(2),
+    );
     assert_eq!(result, Err(Ok(Error::NonceFuture)));
 }
 
@@ -720,9 +738,12 @@ fn duplicate_nonce_rejected() {
     let ctx = setup(&env);
 
     // Submit first proposal with nonce = 1
-    let _ = ctx
-        .ms
-        .propose_action(&ctx.admin, &ActionType::FeeChange, &fee_params(100), &U256::from_u32(1));
+    let _ = ctx.ms.propose_action(
+        &ctx.admin,
+        &ActionType::FeeChange,
+        &fee_params(100),
+        &U256::from_u32(1),
+    );
 
     // Try to submit another proposal with same nonce (simulating cross-contract replay)
     // Note: this requires bypassing the normal flow, but we test the check exists
@@ -741,9 +762,12 @@ fn nonce_view_function_works() {
     assert_eq!(ctx.ms.get_proposer_nonce(&ctx.signer_b), U256::from_u32(0));
 
     // After one proposal, nonce advances
-    let _ = ctx
-        .ms
-        .propose_action(&ctx.admin, &ActionType::FeeChange, &fee_params(100), &U256::from_u32(1));
+    let _ = ctx.ms.propose_action(
+        &ctx.admin,
+        &ActionType::FeeChange,
+        &fee_params(100),
+        &U256::from_u32(1),
+    );
     assert_eq!(ctx.ms.get_proposer_nonce(&ctx.admin), U256::from_u32(2));
     assert_eq!(ctx.ms.get_proposer_nonce(&ctx.signer_b), U256::from_u32(0));
 }

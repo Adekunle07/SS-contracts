@@ -68,7 +68,10 @@ pub fn set_next_proposal_id(env: &Env, id: u32) {
 /// Load the next expected nonce for a proposer.
 pub fn get_proposer_nonce(env: &Env, proposer: &Address) -> U256 {
     let key = StorageKey::ProposerNonce(proposer.clone());
-    env.storage().persistent().get(&key).unwrap_or(U256::from_u32(0))
+    env.storage()
+        .persistent()
+        .get(&key)
+        .unwrap_or(U256::from_u32(0))
 }
 
 /// Save the next expected nonce for a proposer.
