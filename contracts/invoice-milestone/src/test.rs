@@ -114,3 +114,27 @@ fn test_duplicate_milestones_rejected() {
         Err(Ok(Error::MilestonesAlreadySet))
     );
 }
+
+#[test]
+fn test_preverified_milestone_rejected_atomically() {
+    let (env, client, _admin, issuer, _token) = setup();
+    let inv = invoice_id(&env);
+    let mut milestones = make_milestones(&env);
+    milestones.set(
+        1,
+        Milestone {
+            amount: 300,
+            description_hash: BytesN::from_array(&env, &[11u8; 32]),
+            verified: true,
+        },
+    );
+
+    assert_eq!(
+        client.create_milestones(&inv, &issuer, &milestones),
+        Err(Ok(Error::AlreadyVerified))
+    );
+    assert_eq!(
+        client.get_milestone_status(&inv),
+        Err(Ok(Error::InvoiceNotFound))
+    );
+}

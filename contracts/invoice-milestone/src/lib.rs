@@ -69,6 +69,9 @@ impl InvoiceMilestone {
             if m.amount <= 0 {
                 return Err(Error::InvalidAmount);
             }
+            if m.verified {
+                return Err(Error::AlreadyVerified);
+            }
         }
         env.storage()
             .persistent()
